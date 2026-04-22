@@ -61,7 +61,7 @@ Write the full resume for ${form.country} standards, then add:
     }
     setError(""); setLoading(true); setResult(null);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -82,7 +82,7 @@ Write the full resume for ${form.country} standards, then add:
   const analyzeATS = async () => {
     setAtsLoading(true); setAtsResult(null);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -104,17 +104,15 @@ Write the full resume for ${form.country} standards, then add:
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", background: "#0a0a0f", minHeight: "100vh", color: "#f0f0f8", padding: "20px" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        {/* Header */}
         <div style={{ textAlign: "center", padding: "40px 0 32px" }}>
-          <div style={{ display: "inline-block", background: "rgba(108,99,255,0.15)", border: "1px solid rgba(108,99,255,0.3)", color: "#a89fff", fontSize: 12, padding: "4px 14px", borderRadius: 100, marginBottom: 16, letterSpacing: "0.05em" }}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
+          <div style={{ display: "inline-block", background: "rgba(108,99,255,0.15)", border: "1px solid rgba(108,99,255,0.3)", color: "#a89fff", fontSize: 12, padding: "4px 14px", borderRadius: 100, marginBottom: 16 }}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
           <h1 style={{ fontSize: "clamp(28px,6vw,52px)", fontWeight: 800, background: "linear-gradient(135deg,#fff 30%,#a89fff 70%,#ff6584 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: "0 0 12px" }}>ResumeForge AI</h1>
           <p style={{ color: "#7878a0", fontSize: 16, margin: 0 }}>Build country-specific, ATS-optimized resumes for any job, anywhere.</p>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: "flex", gap: 6, background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 12, padding: 5, maxWidth: 380, margin: "0 auto 32px" }}>
           {["builder", "ats"].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: "10px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 500, background: tab === t ? "#6c63ff" : "transparent", color: tab === t ? "#fff" : "#7878a0", transition: "all 0.2s" }}>
+            <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: "10px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 500, background: tab === t ? "#6c63ff" : "transparent", color: tab === t ? "#fff" : "#7878a0" }}>
               {t === "builder" ? "✦ Build Resume" : "◎ ATS Checker"}
             </button>
           ))}
@@ -124,46 +122,39 @@ Write the full resume for ${form.country} standards, then add:
           <>
             {error && <div style={{ background: "rgba(255,101,132,0.1)", border: "1px solid rgba(255,101,132,0.2)", color: "#ff6584", borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>⚠ {error}</div>}
 
-            {[
-              { title: "Personal Information", content: (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                  {[["Full Name *", "fullName", "Rahul Sharma"], ["Email", "email", "email@example.com"], ["Phone", "phone", "+91 98765 43210"], ["City", "city", "Mumbai"], ["LinkedIn", "linkedIn", "linkedin.com/in/yourname"]].map(([label, key, ph]) => (
-                    <div key={key}><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>{label}</label><input placeholder={ph} value={form[key]} onChange={e => set(key, e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", boxSizing: "border-box" }} /></div>
-                  ))}
-                  <div><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Target Country *</label>
-                    <select value={form.country} onChange={e => set("country", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none" }}>
-                      <option value="">Select Country...</option>
-                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
+            <div style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#6c63ff", marginBottom: 18 }}>Personal Information</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                {[["Full Name *", "fullName", "Rahul Sharma"], ["Email", "email", "email@example.com"], ["Phone", "phone", "+91 98765 43210"], ["City", "city", "Mumbai"], ["LinkedIn", "linkedIn", "linkedin.com/in/yourname"]].map(([label, key, ph]) => (
+                  <div key={key}><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>{label}</label><input placeholder={ph} value={form[key]} onChange={e => set(key, e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", boxSizing: "border-box" }} /></div>
+                ))}
+                <div><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Target Country *</label>
+                  <select value={form.country} onChange={e => set("country", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none" }}>
+                    <option value="">Select Country...</option>
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
-              )},
-              { title: "Target Role", content: (
-                <>
-                  <div style={{ marginBottom: 14 }}><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Target Job Title *</label><input placeholder="e.g. Senior Software Engineer" value={form.jobTitle} onChange={e => set("jobTitle", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", boxSizing: "border-box" }} /></div>
-                  <div style={{ marginBottom: 14 }}><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Professional Summary (optional)</label><textarea placeholder="Brief overview..." value={form.summary} onChange={e => set("summary", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", minHeight: 80, resize: "vertical", boxSizing: "border-box" }} /></div>
-                  <div><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Paste Job Description (for ATS)</label><textarea placeholder="Paste job description here..." value={form.jobDescription} onChange={e => set("jobDescription", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", minHeight: 100, resize: "vertical", boxSizing: "border-box" }} /></div>
-                </>
-              )},
-              { title: "Skills", content: (
-                <>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <input placeholder="Add a skill (e.g. Python, Excel...)" value={skillInput} onChange={e => setSkillInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addSkill()} style={{ flex: 1, background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none" }} />
-                    <button onClick={addSkill} style={{ background: "rgba(108,99,255,0.2)", border: "1px solid rgba(108,99,255,0.3)", color: "#6c63ff", borderRadius: 8, padding: "0 20px", cursor: "pointer", fontSize: 22 }}>+</button>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                    {skills.map(s => <div key={s} style={{ background: "rgba(108,99,255,0.12)", border: "1px solid rgba(108,99,255,0.25)", color: "#a89fff", padding: "5px 12px", borderRadius: 100, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>{s}<button onClick={() => setSkills(sk => sk.filter(x => x !== s))} style={{ background: "none", border: "none", color: "#7878a0", cursor: "pointer", fontSize: 15, padding: 0 }}>×</button></div>)}
-                  </div>
-                </>
-              )}
-            ].map(({ title, content }) => (
-              <div key={title} style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24, marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#6c63ff", marginBottom: 18 }}>{title}</div>
-                {content}
               </div>
-            ))}
+            </div>
 
-            {/* Experience */}
+            <div style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#6c63ff", marginBottom: 18 }}>Target Role</div>
+              <div style={{ marginBottom: 14 }}><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Target Job Title *</label><input placeholder="e.g. Senior Software Engineer" value={form.jobTitle} onChange={e => set("jobTitle", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", boxSizing: "border-box" }} /></div>
+              <div style={{ marginBottom: 14 }}><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Professional Summary</label><textarea placeholder="Brief overview..." value={form.summary} onChange={e => set("summary", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", minHeight: 80, resize: "vertical", boxSizing: "border-box" }} /></div>
+              <div><label style={{ fontSize: 11, color: "#7878a0", display: "block", marginBottom: 5, textTransform: "uppercase" }}>Paste Job Description (for ATS)</label><textarea placeholder="Paste job description here..." value={form.jobDescription} onChange={e => set("jobDescription", e.target.value)} style={{ width: "100%", background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none", minHeight: 100, resize: "vertical", boxSizing: "border-box" }} /></div>
+            </div>
+
+            <div style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#6c63ff", marginBottom: 18 }}>Skills</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input placeholder="Add a skill..." value={skillInput} onChange={e => setSkillInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addSkill()} style={{ flex: 1, background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 8, color: "#f0f0f8", fontFamily: "inherit", fontSize: 14, padding: "10px 12px", outline: "none" }} />
+                <button onClick={addSkill} style={{ background: "rgba(108,99,255,0.2)", border: "1px solid rgba(108,99,255,0.3)", color: "#6c63ff", borderRadius: 8, padding: "0 20px", cursor: "pointer", fontSize: 22 }}>+</button>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                {skills.map(s => <div key={s} style={{ background: "rgba(108,99,255,0.12)", border: "1px solid rgba(108,99,255,0.25)", color: "#a89fff", padding: "5px 12px", borderRadius: 100, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>{s}<button onClick={() => setSkills(sk => sk.filter(x => x !== s))} style={{ background: "none", border: "none", color: "#7878a0", cursor: "pointer", fontSize: 15, padding: 0 }}>×</button></div>)}
+              </div>
+            </div>
+
             <div style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24, marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#6c63ff", marginBottom: 18 }}>Work Experience</div>
               {experiences.map((exp, i) => (
@@ -180,7 +171,6 @@ Write the full resume for ${form.country} standards, then add:
               <button onClick={() => setExperiences(ex => [...ex, { company: "", role: "", duration: "", description: "" }])} style={{ width: "100%", background: "transparent", border: "1px dashed #2a2a3d", color: "#7878a0", borderRadius: 10, padding: 11, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>+ Add Another Experience</button>
             </div>
 
-            {/* Education */}
             <div style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24, marginBottom: 20 }}>
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#6c63ff", marginBottom: 18 }}>Education</div>
               {education.map((edu, i) => (
@@ -204,7 +194,6 @@ Write the full resume for ${form.country} standards, then add:
 
             {result && (
               <div style={{ marginTop: 28 }}>
-                {/* ATS Score */}
                 <div style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24, marginBottom: 20, display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
                   <div style={{ textAlign: "center", minWidth: 90 }}>
                     <div style={{ fontSize: 48, fontWeight: 800, color: scoreColor(result.ats.overall), lineHeight: 1 }}>{result.ats.overall}</div>
@@ -226,7 +215,6 @@ Write the full resume for ${form.country} standards, then add:
                     </div>
                   )}
                 </div>
-                {/* Resume Text */}
                 <div style={{ background: "#13131a", border: "1px solid #2a2a3d", borderRadius: 16, padding: 24 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                     <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>📄 Your Resume</h2>
