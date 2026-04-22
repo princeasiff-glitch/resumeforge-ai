@@ -70,11 +70,14 @@ Write the full resume for ${form.country} standards, then add:
         })
       });
       const data = await res.json();
-      const text = data.content?.map(b => b.text || "").join("") || "";
+      const text = data.content?.filter(b => b.type === "text").map(b => b.text || "").join("") || "";
       let ats = { overall: 72, keyword: 68, formatting: 85, readability: 78, skills: 70, rating: "Good", tips: [] };
       const jsonMatch = text.match(/\{[^{}]*"overall"[^{}]*\}/s);
       if (jsonMatch) { try { ats = { ...ats, ...JSON.parse(jsonMatch[0]) }; } catch {} }
-      setResult({ resume: text.split("=== ATS ANALYSIS ===")[0].trim(), ats });
+      const resumeText = text.includes("=== ATS ANALYSIS ===") 
+  ? text.split("=== ATS ANALYSIS ===")[0].trim() 
+  : text.replace(/\{[^{}]*"overall"[^{}]*\}/s, "").trim();
+setResult({ resume: resumeText || text, ats });
     } catch { setError("Something went wrong. Please try again."); }
     setLoading(false);
   };
