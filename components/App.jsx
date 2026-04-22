@@ -39,21 +39,22 @@ export default function App() {
   const updateExp = (i, k, v) => setExperiences(ex => ex.map((e, idx) => idx === i ? { ...e, [k]: v } : e));
   const updateEdu = (i, k, v) => setEducation(ed => ed.map((e, idx) => idx === i ? { ...e, [k]: v } : e));
 
-  const buildPrompt = () => `
-You are a world-class resume writer and ATS expert. Create a professional ATS-optimized resume.
-TARGET COUNTRY: ${form.country || "International"}
-Name: ${form.fullName}, Email: ${form.email}, Phone: ${form.phone}, City: ${form.city}
-LinkedIn: ${form.linkedIn}, Target Role: ${form.jobTitle}
+  const buildPrompt = () => `You are a world-class resume writer. Create a professional resume for ${form.country || "International"} job market.
+
+Name: ${form.fullName}
+Email: ${form.email}
+Phone: ${form.phone}
+City: ${form.city}
+LinkedIn: ${form.linkedIn}
+Target Role: ${form.jobTitle}
 Summary: ${form.summary}
 Skills: ${skills.join(", ")}
 Experience: ${experiences.map((e, i) => `${i + 1}. ${e.role} at ${e.company} (${e.duration}): ${e.description}`).join("\n")}
 Education: ${education.map((e, i) => `${i + 1}. ${e.degree} at ${e.institution} (${e.year})`).join("\n")}
 Job Description: ${form.jobDescription || "General professional resume"}
 
-Write the full resume for ${form.country} standards, then add:
-=== ATS ANALYSIS ===
-{"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["tip1","tip2","tip3"]}
-`;
+IMPORTANT: First write the complete resume, then on a new line write exactly "---ATS---" and then on the next line write ONLY this JSON with no other text:
+{"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["tip1","tip2","tip3"]}`;
 
   const generate = async () => {
     if (!form.fullName || !form.country || !form.jobTitle) {
@@ -65,20 +66,45 @@ Write the full resume for ${form.country} standards, then add:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-3-5-sonnet-20241022", max_tokens: 1000,
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 1000,
           messages: [{ role: "user", content: buildPrompt() }]
         })
       });
       const data = await res.json();
-      const text = data.content?.filter(b => b.type === "text").map(b => b.text || "").join("") || "";
+      let fullText = "";
+      if (data && data.content && Array.isArray(data.content)) {
+        for (const block of data.content) {
+          if (block.type === "text" && block.text) {
+            fullText += block.text;
+          }
+        }
+      }
+      let resumeText = fullText;
       let ats = { overall: 72, keyword: 68, formatting: 85, readability: 78, skills: 70, rating: "Good", tips: [] };
-      const jsonMatch = text.match(/\{[^{}]*"overall"[^{}]*\}/s);
-      if (jsonMatch) { try { ats = { ...ats, ...JSON.parse(jsonMatch[0]) }; } catch {} }
-      const resumeText = text.includes("=== ATS ANALYSIS ===") 
-  ? text.split("=== ATS ANALYSIS ===")[0].trim() 
-  : text.replace(/\{[^{}]*"overall"[^{}]*\}/s, "").trim();
-setResult({ resume: resumeText || text, ats });
-    } catch { setError("Something went wrong. Please try again."); }
+      if (fullText.includes("---ATS---")) {
+        const parts = fullText.split("---ATS---");
+        resumeText = parts[0].trim();
+        try {
+          const jsonStr = parts[1].trim();
+          ats = { ...ats, ...JSON.parse(jsonStr) };
+        } catch {}
+      } else {
+        const jsonMatch = fullText.match(/\{"overall":\s*\d+[^}]*\}/);
+        if (jsonMatch) {
+          try {
+            ats = { ...ats, ...JSON.parse(jsonMatch[0]) };
+            resumeText = fullText.replace(jsonMatch[0], "").replace("---ATS---", "").trim();
+          } catch {}
+        }
+      }
+      if (!resumeText || resumeText.length < 10) {
+        resumeText = fullText;
+      }
+      setResult({ resume: resumeText, ats });
+    } catch (e) {
+      setError("Something went wrong: " + e.message);
+    }
     setLoading(false);
   };
 
@@ -89,13 +115,22 @@ setResult({ resume: resumeText || text, ats });
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-3-5-sonnet-20241022", max_tokens: 1000,
-          messages: [{ role: "user", content: `Analyze this resume for ATS. Return ONLY JSON: {"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["tip1","tip2","tip3"],"missing_keywords":["kw1","kw2"]}\nRESUME:\n${atsResumeText}\nJOB:\n${atsJobDesc}` }]
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: `Analyze this resume for ATS compatibility against the job description. Return ONLY a JSON object with no other text:\n{"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["tip1","tip2","tip3"],"missing_keywords":["kw1","kw2"]}\n\nRESUME:\n${atsResumeText}\n\nJOB DESCRIPTION:\n${atsJobDesc}` }]
         })
       });
       const data = await res.json();
-      const text = data.content?.map(b => b.text || "").join("") || "{}";
-      try { setAtsResult(JSON.parse(text.replace(/```json|```/g, "").trim())); } catch {
+      let fullText = "";
+      if (data && data.content && Array.isArray(data.content)) {
+        for (const block of data.content) {
+          if (block.type === "text" && block.text) fullText += block.text;
+        }
+      }
+      try {
+        const clean = fullText.replace(/```json|```/g, "").trim();
+        setAtsResult(JSON.parse(clean));
+      } catch {
         setAtsResult({ overall: 70, keyword: 65, formatting: 80, readability: 75, skills: 68, rating: "Good", tips: ["Add more keywords", "Use standard headings", "Quantify achievements"], missing_keywords: [] });
       }
     } catch {}
@@ -223,7 +258,7 @@ setResult({ resume: resumeText || text, ats });
                     <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>📄 Your Resume</h2>
                     <button onClick={() => { navigator.clipboard.writeText(result.resume); setCopied(true); setTimeout(() => setCopied(false), 2000); }} style={{ background: "rgba(67,233,123,0.1)", border: "1px solid rgba(67,233,123,0.25)", color: "#43e97b", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>{copied ? "✓ Copied!" : "⎘ Copy"}</button>
                   </div>
-                  <pre style={{ background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 10, padding: 20, fontSize: 13, lineHeight: 1.8, color: "#f0f0f8", whiteSpace: "pre-wrap", margin: 0, fontFamily: "inherit" }}>{result.resume}</pre>
+                  <pre style={{ background: "#1c1c28", border: "1px solid #2a2a3d", borderRadius: 10, padding: 20, fontSize: 13, lineHeight: 1.8, color: "#f0f0f8", whiteSpace: "pre-wrap", margin: 0, fontFamily: "inherit", minHeight: 100 }}>{result.resume}</pre>
                 </div>
               </div>
             )}
