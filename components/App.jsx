@@ -65,7 +65,7 @@ Write the full resume for ${form.country} standards, then add:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
+          model: "claude-3-5-sonnet-20241022", max_tokens: 1000,
           messages: [{ role: "user", content: buildPrompt() }]
         })
       });
@@ -86,7 +86,7 @@ Write the full resume for ${form.country} standards, then add:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
+          model: "claude-3-5-sonnet-20241022", max_tokens: 1000,
           messages: [{ role: "user", content: `Analyze this resume for ATS. Return ONLY JSON: {"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["tip1","tip2","tip3"],"missing_keywords":["kw1","kw2"]}\nRESUME:\n${atsResumeText}\nJOB:\n${atsJobDesc}` }]
         })
       });
