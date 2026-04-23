@@ -32,7 +32,6 @@ export default function App() {
   const addSkill = () => { if(skillInput.trim()&&!skills.includes(skillInput.trim())){setSkills(s=>[...s,skillInput.trim()]);setSkillInput("");} };
   const updateExp = (i,k,v) => setExperiences(ex=>ex.map((e,idx)=>idx===i?{...e,[k]:v}:e));
   const updateEdu = (i,k,v) => setEducation(ed=>ed.map((e,idx)=>idx===i?{...e,[k]:v}:e));
-
   const extraFields = COUNTRY_FIELDS[form.country] || [];
 
   const generate = async () => {
@@ -40,7 +39,7 @@ export default function App() {
     setError("");setLoading(true);setResult(null);
     try {
       const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join(", ");
-      const prompt = `Write a polished, professional resume for ${form.country} job market. Follow exact resume conventions for ${form.country}.
+      const prompt = `Write a polished professional resume for ${form.country} job market following exact conventions for that country.
 
 CANDIDATE INFO:
 Name: ${form.fullName}
@@ -56,35 +55,43 @@ ${experiences.map(e=>`${e.role} at ${e.company} (${e.duration}): ${e.description
 EDUCATION:
 ${education.map(e=>`${e.degree} at ${e.institution} (${e.year})`).join("\n")}
 
-SUMMARY: ${form.summary||"Generate a professional summary"}
-JOB DESCRIPTION: ${form.jobDescription||"General role"}
+SUMMARY: ${form.summary||"Generate a strong professional summary"}
+JOB DESCRIPTION TO MATCH: ${form.jobDescription||"General professional role"}
 
-INSTRUCTIONS:
-1. Write a complete polished resume following ${form.country} conventions
-2. Use proper formatting with sections: Contact, Summary, Experience, Education, Skills${extraFields.length>0?", and include "+extraFields.map(f=>f.label).join(", ")+" as required for "+form.country+" resumes":""}
-3. Make bullet points strong with action verbs and quantifiable results
-4. After the resume write exactly: ---ATS_DATA---
-5. Then write ONLY this JSON (no other text):
-{"score":82,"keyword":78,"formatting":88,"readability":85,"skills":80,"rating":"Good","tips":["specific tip 1","specific tip 2","specific tip 3","specific tip 4"],"missing":["missing item 1","missing item 2","missing item 3"]}`;
+IMPORTANT FORMATTING RULES:
+- Do NOT use # or ## for headings. Use UPPERCASE plain text for section titles like: PROFESSIONAL SUMMARY, PROFESSIONAL EXPERIENCE etc.
+- Do NOT use ** or * for bold or italic
+- Use plain - for bullet points
+- Separate sections with a blank line only
+- After the complete resume, write exactly on its own line: ---ATS_DATA---
+- Then on the next line write ONLY this JSON with real scores based on the resume:
+{"score":82,"keyword":78,"formatting":88,"readability":85,"skills":80,"rating":"Good","tips":["tip1","tip2","tip3","tip4"],"missing":["item1","item2","item3"]}`;
 
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-      const fullText = data?.text || "";
 
-      let resumeText = fullText;
+      let resumeText = "";
       let ats = {score:72,keyword:68,formatting:85,readability:78,skills:70,rating:"Good",tips:[],missing:[]};
 
-      if(fullText.includes("---ATS_DATA---")){
-        const parts = fullText.split("---ATS_DATA---");
-        resumeText = parts[0].trim();
-        try{
-          const jsonStr = parts[1].trim();
-          const parsed = JSON.parse(jsonStr);
-          ats = {...ats,...parsed};
-        }catch{}
+      // Use pre-parsed ats from API if available
+      if(data.ats){
+        ats = {...ats,...data.ats};
+        resumeText = data.text || "";
+      } else {
+        const fullText = data?.text || "";
+        if(fullText.includes("---ATS_DATA---")){
+          const parts = fullText.split("---ATS_DATA---");
+          resumeText = parts[0].trim();
+          try{
+            const jsonStr = parts[1].replace(/```json|```/g,"").trim();
+            ats = {...ats,...JSON.parse(jsonStr)};
+          }catch{}
+        } else {
+          resumeText = fullText;
+        }
       }
 
-      if(!resumeText||resumeText.length<50) resumeText = fullText;
+      if(!resumeText||resumeText.length<50) resumeText = data?.text||"";
       setResult({resume:resumeText, ats});
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
@@ -93,9 +100,8 @@ INSTRUCTIONS:
   const analyzeATS = async () => {
     setAtsLoading(true);setAtsResult(null);
     try {
-      const prompt = `Analyze this resume against the job description for ATS compatibility. Be specific and actionable.
-After analysis write ONLY this JSON:
-{"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["specific actionable tip 1","specific actionable tip 2","specific actionable tip 3"],"missing_keywords":["keyword1","keyword2","keyword3"]}
+      const prompt = `Analyze this resume against the job description for ATS compatibility. Reply with ONLY a JSON object, no other text:
+{"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["specific tip 1","specific tip 2","specific tip 3"],"missing_keywords":["keyword1","keyword2","keyword3"]}
 
 RESUME:
 ${atsResumeText}
@@ -105,13 +111,18 @@ ${atsJobDesc}`;
 
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-      const text = data?.text || "{}";
-      try{
-        const clean = text.replace(/```json|```/g,"").trim();
-        const jsonMatch = clean.match(/\{[\s\S]*\}/);
-        if(jsonMatch) setAtsResult(JSON.parse(jsonMatch[0]));
-      }catch{
-        setAtsResult({overall:70,keyword:65,formatting:80,readability:75,skills:68,rating:"Good",tips:["Add more keywords from job description","Use standard section headings","Quantify your achievements with numbers"],missing_keywords:[]});
+
+      if(data.ats){
+        setAtsResult({overall:data.ats.score||70,...data.ats});
+      } else {
+        const text = data?.text || "{}";
+        try{
+          const clean = text.replace(/```json|```/g,"").trim();
+          const jsonMatch = clean.match(/\{[\s\S]*\}/);
+          if(jsonMatch) setAtsResult(JSON.parse(jsonMatch[0]));
+        }catch{
+          setAtsResult({overall:70,keyword:65,formatting:80,readability:75,skills:68,rating:"Good",tips:["Add more keywords from job description","Use standard section headings","Quantify your achievements"],missing_keywords:[]});
+        }
       }
     }catch{}
     setAtsLoading(false);
@@ -123,14 +134,12 @@ ${atsJobDesc}`;
     <div style={{fontFamily:"system-ui,sans-serif",background:"#0a0a0f",minHeight:"100vh",color:"#f0f0f8",padding:"20px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
 
-        {/* Header */}
         <div style={{textAlign:"center",padding:"40px 0 32px"}}>
           <div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",color:"#a89fff",fontSize:12,padding:"4px 14px",borderRadius:100,marginBottom:16}}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
           <h1 style={{fontSize:"clamp(28px,6vw,52px)",fontWeight:800,background:"linear-gradient(135deg,#fff 30%,#a89fff 70%,#ff6584 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"0 0 12px"}}>ResumeForge AI</h1>
           <p style={{color:"#7878a0",fontSize:16,margin:0}}>Build country-specific, ATS-optimized resumes for any job, anywhere.</p>
         </div>
 
-        {/* Tabs */}
         <div style={{display:"flex",gap:6,background:"#13131a",border:"1px solid #2a2a3d",borderRadius:12,padding:5,maxWidth:380,margin:"0 auto 32px"}}>
           {["builder","ats"].map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"10px 16px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:500,background:tab===t?"#6c63ff":"transparent",color:tab===t?"#fff":"#7878a0"}}>
@@ -142,7 +151,6 @@ ${atsJobDesc}`;
         {tab==="builder"&&<>
           {error&&<div style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:10,padding:"12px 16px",marginBottom:16}}>⚠ {error}</div>}
 
-          {/* Personal Info */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Personal Information</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
@@ -158,7 +166,6 @@ ${atsJobDesc}`;
             </div>
           </div>
 
-          {/* Country-Specific Fields */}
           {extraFields.length>0&&<div style={{background:"#13131a",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:6}}>🌍 {form.country}-Specific Fields</div>
             <div style={{fontSize:12,color:"#7878a0",marginBottom:16}}>These fields are important for {form.country} job applications and boost your ATS score.</div>
@@ -169,15 +176,13 @@ ${atsJobDesc}`;
             </div>
           </div>}
 
-          {/* Target Role */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Target Role</div>
             <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="e.g. Accounting Supervisor" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
             <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary (optional)</label><textarea placeholder="Brief overview of your experience..." value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></div>
-            <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description (for ATS optimization)</label><textarea placeholder="Paste the job description here to match keywords..." value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/></div>
+            <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description (for ATS optimization)</label><textarea placeholder="Paste the job description here..." value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/></div>
           </div>
 
-          {/* Skills */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Skills</div>
             <div style={{display:"flex",gap:10}}>
@@ -189,7 +194,6 @@ ${atsJobDesc}`;
             </div>
           </div>
 
-          {/* Experience */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Work Experience</div>
             {experiences.map((exp,i)=>(
@@ -206,7 +210,6 @@ ${atsJobDesc}`;
             <button onClick={()=>setExperiences(ex=>[...ex,{company:"",role:"",duration:"",description:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Experience</button>
           </div>
 
-          {/* Education */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:20}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Education</div>
             {education.map((edu,i)=>(
@@ -229,8 +232,6 @@ ${atsJobDesc}`;
           {loading&&<div style={{textAlign:"center",padding:40}}><div style={{width:40,height:40,border:"3px solid #2a2a3d",borderTopColor:"#6c63ff",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 16px"}}/><p style={{color:"#7878a0"}}>Building your country-specific resume...</p></div>}
 
           {result&&<div style={{marginTop:28}}>
-
-            {/* ATS Score Card */}
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
               <div style={{display:"flex",gap:24,alignItems:"center",flexWrap:"wrap",marginBottom:20}}>
                 <div style={{textAlign:"center",minWidth:90}}>
@@ -248,18 +249,16 @@ ${atsJobDesc}`;
                 </div>
               </div>
 
-              {/* Improvement Tips */}
               {result.ats.tips?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:16,marginBottom:12}}>
                 <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6c63ff",marginBottom:12}}>💡 How to Improve Your ATS Score</div>
                 {result.ats.tips.map((t,i)=>(
                   <div key={i} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
-                    <div style={{background:"rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:"50%",width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</div>
-                    <div style={{fontSize:13,color:"#f0f0f8",lineHeight:1.5}}>{t}</div>
+                    <div style={{background:"rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</div>
+                    <div style={{fontSize:13,color:"#f0f0f8",lineHeight:1.6}}>{t}</div>
                   </div>
                 ))}
               </div>}
 
-              {/* Missing Items */}
               {result.ats.missing?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(255,101,132,0.2)",borderRadius:12,padding:16}}>
                 <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#ff6584",marginBottom:12}}>⚠ Missing from Your Resume</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
@@ -270,7 +269,6 @@ ${atsJobDesc}`;
               </div>}
             </div>
 
-            {/* Resume Output */}
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
                 <h2 style={{margin:0,fontSize:18,fontWeight:700}}>📄 Your Resume — {form.country}</h2>
@@ -281,7 +279,6 @@ ${atsJobDesc}`;
           </div>}
         </>}
 
-        {/* ATS Checker Tab */}
         {tab==="ats"&&<div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
           <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:16}}>ATS Score Checker</div>
           <p style={{color:"#7878a0",fontSize:14,marginBottom:18}}>Paste your existing resume and job description to get an instant ATS score with specific improvement tips.</p>
@@ -307,7 +304,7 @@ ${atsJobDesc}`;
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:"#6c63ff",marginBottom:12}}>💡 Improvement Tips</div>
               {atsResult.tips.map((t,i)=>(
                 <div key={i} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
-                  <div style={{background:"rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:"50%",width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
+                  <div style={{background:"rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
                   <div style={{fontSize:13,color:"#f0f0f8",lineHeight:1.5}}>{t}</div>
                 </div>
               ))}
