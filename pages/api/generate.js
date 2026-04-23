@@ -1,6 +1,4 @@
-export const config = {
-  maxDuration: 60,
-};
+export const config = { maxDuration: 60 };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -21,8 +19,12 @@ export default async function handler(req, res) {
     });
     
     const data = await response.json();
-    res.status(200).json(data);
+    
+    // Extract text and send directly
+    const text = data?.content?.[0]?.text || data?.error?.message || JSON.stringify(data);
+    res.status(200).json({ text });
+    
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ text: "Error: " + error.message });
   }
 }
