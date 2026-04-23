@@ -46,7 +46,7 @@ export default function App() {
       const prompt = `Score this resume vs job description. Reply with ONLY: SCORE:85 KEYWORD:80 FORMAT:90 READ:85 SKILLS:82 TIPS: tip1|tip2|tip3 MISSING: kw1|kw2\nRESUME:${atsResumeText}\nJOB:${atsJobDesc}`;
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-      const text = data?.content?.[0]?.text || "";
+      const text = data?.text || "{}";
       const g = (k) => { const m=text.match(new RegExp(k+":(\\d+)")); return m?parseInt(m[1]):70; };
       const tips = (text.match(/TIPS:\s*(.+?)(?:MISSING:|$)/s)||["",""])[1].trim().split("|").filter(Boolean);
       const missing = (text.match(/MISSING:\s*(.+?)$/s)||["",""])[1].trim().split("|").filter(Boolean);
