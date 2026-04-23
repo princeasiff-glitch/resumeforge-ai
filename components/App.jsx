@@ -30,7 +30,7 @@ export default function App() {
       const prompt = `Write a short professional resume for ${form.country}. Name:${form.fullName} Email:${form.email} Phone:${form.phone} City:${form.city} Role:${form.jobTitle} Skills:${skills.join(",")} Exp:${experiences.map(e=>`${e.role} at ${e.company} ${e.duration}: ${e.description}`).join(";")} Edu:${education.map(e=>`${e.degree} ${e.institution} ${e.year}`).join(";")}. After resume write ATSCORE: and a number 1-100.`;
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-      const text = data?.content?.[0]?.text || "";
+      const text = data?.text || "";
       let score = 72;
       const scoreMatch = text.match(/ATSCORE:\s*(\d+)/);
       if(scoreMatch) score = parseInt(scoreMatch[1]);
