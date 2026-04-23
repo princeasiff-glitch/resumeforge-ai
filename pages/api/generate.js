@@ -19,11 +19,17 @@ export default async function handler(req, res) {
     });
     
     const data = await response.json();
+    let text = data?.content?.[0]?.text || data?.error?.message || JSON.stringify(data);
     
-    // Extract text and send directly
-    const text = data?.content?.[0]?.text || data?.error?.message || JSON.stringify(data);
+    // Clean markdown symbols
+    text = text
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/---/g, '─────────────────────────')
+      .replace(/•/g, '-');
+    
     res.status(200).json({ text });
-    
   } catch (error) {
     res.status(500).json({ text: "Error: " + error.message });
   }
