@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     let rawText = data?.content?.[0]?.text || data?.error?.message || JSON.stringify(data);
     
-    // Split ATS data FIRST before cleaning
+    // Split ATS data FIRST before any cleaning
     let resumeText = rawText;
     let atsData = null;
     
@@ -31,20 +31,22 @@ export default async function handler(req, res) {
       try {
         const jsonStr = parts[1].replace(/```json|```/g, '').trim();
         atsData = JSON.parse(jsonStr);
-      } catch(e) {}
+      } catch(e) {
+        console.log('ATS parse error:', e.message);
+      }
     }
     
-    // Clean markdown from resume only
+    // Clean markdown from resume text only
     resumeText = resumeText
-      .replace(/#{1,6}\s/g, '')
+      .replace(/^#{1,6}\s+/gm, '')
       .replace(/\*\*/g, '')
       .replace(/\*/g, '')
-      .replace(/^---$/gm, '─────────────────────')
+      .replace(/^---$/gm, '─────────────────────────')
       .trim();
     
     res.status(200).json({ text: resumeText, ats: atsData });
     
   } catch (error) {
-    res.status(500).json({ text: "Error: " + error.message });
+    res.status(500).json({ text: "Error: " + error.message, ats: null });
   }
 }
