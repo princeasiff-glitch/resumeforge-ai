@@ -3,13 +3,24 @@ import { useState } from "react";
 const COUNTRIES = ["United States","United Kingdom","India","Canada","Australia","Germany","France","UAE","Singapore","South Africa","Nigeria","Brazil","Japan","South Korea","Netherlands","Sweden","New Zealand","Malaysia","Philippines","Kenya","Pakistan","Bangladesh","Sri Lanka","Ireland","Italy","Spain","Portugal","Poland","Mexico","Argentina"];
 
 const COUNTRY_FIELDS = {
-  "UAE": [{key:"nationality",label:"Nationality",placeholder:"e.g. Indian"},{key:"visaStatus",label:"Visa Status",placeholder:"Employment Visa / Visit Visa / Own Visa"},{key:"languages",label:"Languages Known",placeholder:"English, Arabic, Hindi"}],
-  "United Kingdom": [{key:"rightToWork",label:"Right to Work",placeholder:"British Citizen / Skilled Worker Visa / Graduate Visa"},{key:"languages",label:"Languages",placeholder:"English, French..."}],
-  "Australia": [{key:"rightToWork",label:"Work Rights",placeholder:"Australian Citizen / PR / Working Holiday"},{key:"languages",label:"Languages",placeholder:"English..."}],
-  "Canada": [{key:"rightToWork",label:"Work Authorization",placeholder:"Canadian Citizen / PR / Work Permit"},{key:"languages",label:"Languages",placeholder:"English, French..."}],
-  "United States": [{key:"rightToWork",label:"Work Authorization",placeholder:"US Citizen / Green Card / H1B / OPT"},{key:"languages",label:"Languages",placeholder:"English, Spanish..."}],
-  "Germany": [{key:"rightToWork",label:"Work Permit",placeholder:"EU Citizen / Work Permit"},{key:"languages",label:"Languages",placeholder:"German, English..."}],
-  "Singapore": [{key:"rightToWork",label:"Work Pass",placeholder:"Singapore PR / EP / S Pass / Work Permit"},{key:"languages",label:"Languages",placeholder:"English, Mandarin..."}],
+  "UAE":[{key:"nationality",label:"Nationality",placeholder:"e.g. Indian, Pakistani"},{key:"visaStatus",label:"Visa Status",placeholder:"Employment Visa / Visit Visa / Own Visa"},{key:"languages",label:"Languages Known",placeholder:"English, Arabic, Hindi"}],
+  "United Kingdom":[{key:"rightToWork",label:"Right to Work",placeholder:"British Citizen / Skilled Worker Visa / Graduate Visa"},{key:"languages",label:"Languages",placeholder:"English, French..."}],
+  "Australia":[{key:"rightToWork",label:"Work Rights",placeholder:"Australian Citizen / PR / Skilled Visa 482 / Sponsorship Required"},{key:"languages",label:"Languages",placeholder:"English, Mandarin..."}],
+  "Canada":[{key:"rightToWork",label:"Work Authorization",placeholder:"Canadian Citizen / PR / Work Permit"},{key:"languages",label:"Languages",placeholder:"English, French..."}],
+  "United States":[{key:"rightToWork",label:"Work Authorization",placeholder:"US Citizen / Green Card / H1B / OPT"},{key:"languages",label:"Languages",placeholder:"English, Spanish..."}],
+  "Germany":[{key:"rightToWork",label:"Work Permit",placeholder:"EU Citizen / Work Permit / Blue Card"},{key:"languages",label:"Languages",placeholder:"German, English..."}],
+  "Singapore":[{key:"rightToWork",label:"Work Pass",placeholder:"Singapore PR / EP / S Pass / Work Permit"},{key:"languages",label:"Languages",placeholder:"English, Mandarin..."}],
+};
+
+const COUNTRY_PHONE = {
+  "UAE":"+971","United States":"+1","United Kingdom":"+44","India":"+91",
+  "Canada":"+1","Australia":"+61","Germany":"+49","France":"+33",
+  "Singapore":"+65","South Africa":"+27","Nigeria":"+234","Brazil":"+55",
+  "Japan":"+81","South Korea":"+82","Netherlands":"+31","Sweden":"+46",
+  "New Zealand":"+64","Malaysia":"+60","Philippines":"+63","Kenya":"+254",
+  "Pakistan":"+92","Bangladesh":"+880","Sri Lanka":"+94","Ireland":"+353",
+  "Italy":"+39","Spain":"+34","Portugal":"+351","Poland":"+48",
+  "Mexico":"+52","Argentina":"+54"
 };
 
 export default function App() {
@@ -33,66 +44,71 @@ export default function App() {
   const updateExp = (i,k,v) => setExperiences(ex=>ex.map((e,idx)=>idx===i?{...e,[k]:v}:e));
   const updateEdu = (i,k,v) => setEducation(ed=>ed.map((e,idx)=>idx===i?{...e,[k]:v}:e));
   const extraFields = COUNTRY_FIELDS[form.country] || [];
+  const phoneHint = form.country ? (COUNTRY_PHONE[form.country] || "") : "";
 
   const generate = async () => {
     if(!form.fullName||!form.country||!form.jobTitle){setError("Please fill Name, Country, and Job Title.");return;}
     setError("");setLoading(true);setResult(null);
     try {
-      const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join(", ");
-      const prompt = `Write a polished professional resume for ${form.country} job market following exact conventions for that country.
+      const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join("\n");
+      const prompt = `Write a polished professional resume for ${form.country} job market. Follow exact resume conventions for ${form.country}.
 
-CANDIDATE INFO:
+CANDIDATE DETAILS:
 Name: ${form.fullName}
-Email: ${form.email} | Phone: ${form.phone} | City: ${form.city}
+Email: ${form.email}
+Phone: ${form.phone}
+City: ${form.city}
 LinkedIn: ${form.linkedIn||"Not provided"}
 Target Role: ${form.jobTitle}
 Skills: ${skills.join(", ")||"Not specified"}
 ${countryExtra}
 
-EXPERIENCE:
-${experiences.map(e=>`${e.role} at ${e.company} (${e.duration}): ${e.description}`).join("\n")}
+WORK EXPERIENCE:
+${experiences.map(e=>`Role: ${e.role}\nCompany: ${e.company}\nDuration: ${e.duration}\nDetails: ${e.description}`).join("\n\n")}
 
 EDUCATION:
-${education.map(e=>`${e.degree} at ${e.institution} (${e.year})`).join("\n")}
+${education.map(e=>`${e.degree} | ${e.institution} | ${e.year}`).join("\n")}
 
-SUMMARY: ${form.summary||"Generate a strong professional summary"}
-JOB DESCRIPTION TO MATCH: ${form.jobDescription||"General professional role"}
+PROFESSIONAL SUMMARY PROVIDED: ${form.summary||"Please generate a strong professional summary based on the experience above"}
 
-IMPORTANT FORMATTING RULES:
-- Do NOT use # or ## for headings. Use UPPERCASE plain text for section titles like: PROFESSIONAL SUMMARY, PROFESSIONAL EXPERIENCE etc.
-- Do NOT use ** or * for bold or italic
-- Use plain - for bullet points
-- Separate sections with a blank line only
-- After the complete resume, write exactly on its own line: ---ATS_DATA---
-- Then on the next line write ONLY this JSON with real scores based on the resume:
-{"score":82,"keyword":78,"formatting":88,"readability":85,"skills":80,"rating":"Good","tips":["tip1","tip2","tip3","tip4"],"missing":["item1","item2","item3"]}`;
+JOB DESCRIPTION TO MATCH FOR ATS:
+${form.jobDescription||"General professional accounting role"}
+
+STRICT FORMATTING RULES - FOLLOW EXACTLY:
+1. NO hashtags (#) anywhere in the resume
+2. NO asterisks (* or **) anywhere
+3. Use UPPERCASE PLAIN TEXT for all section headings like: PROFESSIONAL SUMMARY, PROFESSIONAL EXPERIENCE, EDUCATION, SKILLS, LANGUAGES
+4. Use plain hyphen (-) for all bullet points
+5. Do NOT mention work rights or sponsorship in the Professional Summary section
+6. Only mention work rights/visa status in a separate WORK RIGHTS or ADDITIONAL INFORMATION section at the bottom
+7. Phone number in resume should use the exact number provided: ${form.phone}
+8. Use realistic date format: Month Year – Month Year
+9. Separate sections with one blank line only
+
+After completing the full resume, write this exact separator on its own line:
+---ATS_DATA---
+Then immediately write ONLY this JSON (replace numbers with real calculated scores):
+{"score":85,"keyword":80,"formatting":90,"readability":87,"skills":82,"rating":"Good","tips":["Specific tip 1 based on actual resume content","Specific tip 2","Specific tip 3","Specific tip 4"],"missing":["Specific missing item 1","Specific missing item 2","Specific missing item 3"]}`;
 
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
 
-      let resumeText = "";
+      let resumeText = data?.text || "";
       let ats = {score:72,keyword:68,formatting:85,readability:78,skills:70,rating:"Good",tips:[],missing:[]};
 
-      // Use pre-parsed ats from API if available
       if(data.ats){
         ats = {...ats,...data.ats};
-        resumeText = data.text || "";
-      } else {
-        const fullText = data?.text || "";
-        if(fullText.includes("---ATS_DATA---")){
-          const parts = fullText.split("---ATS_DATA---");
-          resumeText = parts[0].trim();
-          try{
-            const jsonStr = parts[1].replace(/```json|```/g,"").trim();
-            ats = {...ats,...JSON.parse(jsonStr)};
-          }catch{}
-        } else {
-          resumeText = fullText;
-        }
+      } else if(resumeText.includes("---ATS_DATA---")){
+        const parts = resumeText.split("---ATS_DATA---");
+        resumeText = parts[0].trim();
+        try{
+          const jsonStr = parts[1].replace(/```json|```/g,"").trim();
+          ats = {...ats,...JSON.parse(jsonStr)};
+        }catch{}
       }
 
-      if(!resumeText||resumeText.length<50) resumeText = data?.text||"";
-      setResult({resume:resumeText, ats});
+      if(!resumeText||resumeText.length<50) resumeText = data?.text||"No resume generated. Please try again.";
+      setResult({resume:resumeText,ats});
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
   };
@@ -100,10 +116,11 @@ IMPORTANT FORMATTING RULES:
   const analyzeATS = async () => {
     setAtsLoading(true);setAtsResult(null);
     try {
-      const prompt = `Analyze this resume against the job description for ATS compatibility. Reply with ONLY a JSON object, no other text:
-{"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["specific tip 1","specific tip 2","specific tip 3"],"missing_keywords":["keyword1","keyword2","keyword3"]}
+      const prompt = `You are an ATS expert. Analyze this resume against the job description carefully.
+Return ONLY a JSON object with no other text before or after:
+{"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["specific actionable tip 1","specific actionable tip 2","specific actionable tip 3"],"missing_keywords":["keyword1","keyword2","keyword3"]}
 
-RESUME:
+RESUME TO ANALYZE:
 ${atsResumeText}
 
 JOB DESCRIPTION:
@@ -113,15 +130,16 @@ ${atsJobDesc}`;
       const data = await res.json();
 
       if(data.ats){
-        setAtsResult({overall:data.ats.score||70,...data.ats});
+        setAtsResult({overall:data.ats.score||data.ats.overall||70,...data.ats});
       } else {
         const text = data?.text || "{}";
         try{
           const clean = text.replace(/```json|```/g,"").trim();
           const jsonMatch = clean.match(/\{[\s\S]*\}/);
           if(jsonMatch) setAtsResult(JSON.parse(jsonMatch[0]));
+          else throw new Error("No JSON found");
         }catch{
-          setAtsResult({overall:70,keyword:65,formatting:80,readability:75,skills:68,rating:"Good",tips:["Add more keywords from job description","Use standard section headings","Quantify your achievements"],missing_keywords:[]});
+          setAtsResult({overall:70,keyword:65,formatting:80,readability:75,skills:68,rating:"Needs Improvement",tips:["Add more keywords from job description","Use standard section headings","Quantify achievements with numbers and percentages"],missing_keywords:["keywords not found"]});
         }
       }
     }catch{}
@@ -151,12 +169,17 @@ ${atsJobDesc}`;
         {tab==="builder"&&<>
           {error&&<div style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:10,padding:"12px 16px",marginBottom:16}}>⚠ {error}</div>}
 
+          {/* Personal Info */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Personal Information</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-              {[["Full Name *","fullName","Mohammed Asif"],["Email","email","email@example.com"],["Phone","phone","+971 50 123 4567"],["City","city","Dubai"],["LinkedIn","linkedIn","linkedin.com/in/yourname"]].map(([l,k,p])=>(
+              {[["Full Name *","fullName","Mohammed Asif"],["Email","email","email@example.com"],["City","city","Dubai / Hyderabad (Relocating)"],["LinkedIn","linkedIn","linkedin.com/in/yourname"]].map(([l,k,p])=>(
                 <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>{l}</label><input placeholder={p} value={form[k]} onChange={e=>set(k,e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
               ))}
+              <div>
+                <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Phone {phoneHint&&<span style={{color:"#6c63ff",fontWeight:700}}>({phoneHint})</span>}</label>
+                <input placeholder={phoneHint?`${phoneHint} 50 123 4567`:"+971 50 123 4567"} value={form.phone} onChange={e=>set("phone",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
+              </div>
               <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Country *</label>
                 <select value={form.country} onChange={e=>set("country",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}>
                   <option value="">Select Country...</option>
@@ -164,11 +187,15 @@ ${atsJobDesc}`;
                 </select>
               </div>
             </div>
+            {phoneHint&&<div style={{marginTop:10,background:"rgba(108,99,255,0.08)",border:"1px solid rgba(108,99,255,0.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#a89fff"}}>
+              💡 For {form.country}, phone numbers start with <strong>{phoneHint}</strong>. Make sure your phone number is correct!
+            </div>}
           </div>
 
+          {/* Country Specific Fields */}
           {extraFields.length>0&&<div style={{background:"#13131a",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:6}}>🌍 {form.country}-Specific Fields</div>
-            <div style={{fontSize:12,color:"#7878a0",marginBottom:16}}>These fields are important for {form.country} job applications and boost your ATS score.</div>
+            <div style={{fontSize:12,color:"#7878a0",marginBottom:16}}>These fields are required for {form.country} job applications and significantly boost your ATS score.</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
               {extraFields.map(f=>(
                 <div key={f.key}><label style={{fontSize:11,color:"#a89fff",display:"block",marginBottom:5,textTransform:"uppercase"}}>{f.label}</label><input placeholder={f.placeholder} value={form[f.key]||""} onChange={e=>set(f.key,e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid rgba(108,99,255,0.3)",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
@@ -176,47 +203,56 @@ ${atsJobDesc}`;
             </div>
           </div>}
 
+          {/* Target Role */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Target Role</div>
-            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="e.g. Accounting Supervisor" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary (optional)</label><textarea placeholder="Brief overview of your experience..." value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></div>
-            <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description (for ATS optimization)</label><textarea placeholder="Paste the job description here..." value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/></div>
+            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="e.g. Accounting Supervisor, Software Engineer" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
+            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a"}}>(optional — AI will write one if left blank)</span></label><textarea placeholder="Brief overview of your experience and career goals..." value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></div>
+            <div>
+              <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description <span style={{color:"#43e97b"}}>(Highly Recommended for Better ATS Score!)</span></label>
+              <textarea placeholder="Paste the full job description here to match keywords and boost your ATS score significantly..." value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:120,resize:"vertical",boxSizing:"border-box"}}/>
+              {!form.jobDescription&&<div style={{marginTop:6,fontSize:11,color:"#4a4a6a"}}>⚡ Adding a job description can improve your ATS score by 15-20 points!</div>}
+            </div>
           </div>
 
+          {/* Skills */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Skills</div>
             <div style={{display:"flex",gap:10}}>
-              <input placeholder="Add a skill and press Enter..." value={skillInput} onChange={e=>setSkillInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSkill()} style={{flex:1,background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}/>
-              <button onClick={addSkill} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:8,padding:"0 20px",cursor:"pointer",fontSize:22}}>+</button>
+              <input placeholder="Type a skill and press Enter or click +" value={skillInput} onChange={e=>setSkillInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSkill()} style={{flex:1,background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}/>
+              <button onClick={addSkill} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:8,padding:"0 20px",cursor:"pointer",fontSize:22,fontWeight:300}}>+</button>
             </div>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12}}>
-              {skills.map(s=><div key={s} style={{background:"rgba(108,99,255,0.12)",border:"1px solid rgba(108,99,255,0.25)",color:"#a89fff",padding:"5px 12px",borderRadius:100,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{s}<button onClick={()=>setSkills(sk=>sk.filter(x=>x!==s))} style={{background:"none",border:"none",color:"#7878a0",cursor:"pointer",fontSize:15,padding:0}}>×</button></div>)}
+              {skills.map(s=><div key={s} style={{background:"rgba(108,99,255,0.12)",border:"1px solid rgba(108,99,255,0.25)",color:"#a89fff",padding:"5px 12px",borderRadius:100,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{s}<button onClick={()=>setSkills(sk=>sk.filter(x=>x!==s))} style={{background:"none",border:"none",color:"#7878a0",cursor:"pointer",fontSize:15,padding:0,lineHeight:1}}>×</button></div>)}
             </div>
+            {skills.length===0&&<div style={{marginTop:8,fontSize:11,color:"#4a4a6a"}}>💡 Add at least 5-8 skills to improve your ATS score</div>}
           </div>
 
+          {/* Experience */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Work Experience</div>
             {experiences.map((exp,i)=>(
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
-                {experiences.length>1&&<button onClick={()=>setExperiences(ex=>ex.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14}}>×</button>}
+                {experiences.length>1&&<button onClick={()=>setExperiences(ex=>ex.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
-                  {[["Company","company","e.g. Emirates NBD"],["Role","role","Accounting Supervisor"],["Duration","duration","Jan 2020–Present"]].map(([l,k,p])=>(
+                  {[["Company","company","e.g. Emirates NBD"],["Role / Title","role","Accounting Supervisor"],["Duration","duration","Jan 2020 – Dec 2024"]].map(([l,k,p])=>(
                     <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder={p} value={exp[k]} onChange={e=>updateExp(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
                   ))}
                 </div>
-                <textarea placeholder="Key responsibilities and achievements..." value={exp.description} onChange={e=>updateExp(i,"description",e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
+                <textarea placeholder="Describe your key responsibilities and achievements. Include numbers where possible e.g. 'Managed team of 5', 'Reduced costs by 20%'..." value={exp.description} onChange={e=>updateExp(i,"description",e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",minHeight:90,resize:"vertical",boxSizing:"border-box"}}/>
               </div>
             ))}
-            <button onClick={()=>setExperiences(ex=>[...ex,{company:"",role:"",duration:"",description:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Experience</button>
+            <button onClick={()=>setExperiences(ex=>[...ex,{company:"",role:"",duration:"",description:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13,transition:"all 0.2s"}}>+ Add Another Experience</button>
           </div>
 
+          {/* Education */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:20}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Education</div>
             {education.map((edu,i)=>(
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
-                {education.length>1&&<button onClick={()=>setEducation(ed=>ed.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14}}>×</button>}
+                {education.length>1&&<button onClick={()=>setEducation(ed=>ed.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
-                  {[["Institution","institution","e.g. University of Dubai"],["Degree","degree","B.Com Accounting"],["Year","year","2010–2014"]].map(([l,k,p])=>(
+                  {[["Institution","institution","e.g. Federation University"],["Degree / Qualification","degree","Master of Professional Accounting"],["Year","year","2007 – 2009"]].map(([l,k,p])=>(
                     <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder={p} value={edu[k]} onChange={e=>updateEdu(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
                   ))}
                 </div>
@@ -225,93 +261,122 @@ ${atsJobDesc}`;
             <button onClick={()=>setEducation(ed=>[...ed,{institution:"",degree:"",year:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Education</button>
           </div>
 
-          <button onClick={generate} disabled={loading} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:loading?"not-allowed":"pointer",opacity:loading?0.6:1,marginBottom:8}}>
+          <button onClick={generate} disabled={loading} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:loading?"not-allowed":"pointer",opacity:loading?0.6:1,marginBottom:8,boxShadow:"0 8px 32px rgba(108,99,255,0.35)"}}>
             {loading?"⚙ Generating your resume...":"✦ Generate My ATS-Optimized Resume"}
           </button>
 
-          {loading&&<div style={{textAlign:"center",padding:40}}><div style={{width:40,height:40,border:"3px solid #2a2a3d",borderTopColor:"#6c63ff",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 16px"}}/><p style={{color:"#7878a0"}}>Building your country-specific resume...</p></div>}
+          {loading&&<div style={{textAlign:"center",padding:40}}>
+            <div style={{width:44,height:44,border:"3px solid #2a2a3d",borderTopColor:"#6c63ff",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 16px"}}/>
+            <p style={{color:"#7878a0",fontSize:15}}>Building your {form.country} resume...</p>
+            <p style={{color:"#4a4a6a",fontSize:12,marginTop:4}}>This may take 10-20 seconds</p>
+          </div>}
 
           {result&&<div style={{marginTop:28}}>
+
+            {/* ATS Score Card */}
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
               <div style={{display:"flex",gap:24,alignItems:"center",flexWrap:"wrap",marginBottom:20}}>
-                <div style={{textAlign:"center",minWidth:90}}>
-                  <div style={{fontSize:56,fontWeight:800,color:sc(result.ats.score),lineHeight:1}}>{result.ats.score}</div>
-                  <div style={{fontSize:11,color:"#7878a0",marginTop:4}}>ATS SCORE</div>
-                  <div style={{display:"inline-block",background:"rgba(255,215,0,0.1)",border:"1px solid rgba(255,215,0,0.2)",color:"#ffd700",fontSize:11,fontWeight:600,padding:"2px 10px",borderRadius:100,marginTop:6}}>{result.ats.rating}</div>
+                <div style={{textAlign:"center",minWidth:100}}>
+                  <div style={{fontSize:60,fontWeight:800,color:sc(result.ats.score),lineHeight:1}}>{result.ats.score}</div>
+                  <div style={{fontSize:11,color:"#7878a0",marginTop:4,textTransform:"uppercase",letterSpacing:"0.05em"}}>ATS Score</div>
+                  <div style={{display:"inline-block",background:result.ats.score>=80?"rgba(67,233,123,0.1)":"rgba(255,215,0,0.1)",border:`1px solid ${result.ats.score>=80?"rgba(67,233,123,0.3)":"rgba(255,215,0,0.3)"}`,color:result.ats.score>=80?"#43e97b":"#ffd700",fontSize:12,fontWeight:700,padding:"3px 12px",borderRadius:100,marginTop:8}}>{result.ats.rating}</div>
                 </div>
-                <div style={{flex:1,minWidth:200}}>
+                <div style={{flex:1,minWidth:220}}>
                   {[["Keyword Match",result.ats.keyword,"#6c63ff"],["Formatting",result.ats.formatting,"#43e97b"],["Readability",result.ats.readability,"#ffd700"],["Skills Coverage",result.ats.skills,"#ff6584"]].map(([l,v,c])=>(
-                    <div key={l} style={{marginBottom:8}}>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#7878a0",marginBottom:3}}><span>{l}</span><span>{v}%</span></div>
-                      <div style={{height:5,background:"#2a2a3d",borderRadius:100}}><div style={{height:"100%",width:`${v}%`,background:c,borderRadius:100}}/></div>
+                    <div key={l} style={{marginBottom:9}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#7878a0",marginBottom:3}}><span>{l}</span><span style={{color:c,fontWeight:600}}>{v}%</span></div>
+                      <div style={{height:6,background:"#2a2a3d",borderRadius:100}}><div style={{height:"100%",width:`${v}%`,background:c,borderRadius:100,transition:"width 1s ease"}}/></div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {result.ats.tips?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:16,marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6c63ff",marginBottom:12}}>💡 How to Improve Your ATS Score</div>
+              {result.ats.tips?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:18,marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6c63ff",marginBottom:14}}>💡 How to Improve Your ATS Score</div>
                 {result.ats.tips.map((t,i)=>(
-                  <div key={i} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
-                    <div style={{background:"rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</div>
-                    <div style={{fontSize:13,color:"#f0f0f8",lineHeight:1.6}}>{t}</div>
+                  <div key={i} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}>
+                    <div style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</div>
+                    <div style={{fontSize:13,color:"#e0e0f0",lineHeight:1.6}}>{t}</div>
                   </div>
                 ))}
               </div>}
 
-              {result.ats.missing?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(255,101,132,0.2)",borderRadius:12,padding:16}}>
+              {result.ats.missing?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(255,101,132,0.2)",borderRadius:12,padding:18}}>
                 <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#ff6584",marginBottom:12}}>⚠ Missing from Your Resume</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                   {result.ats.missing.map((m,i)=>(
-                    <div key={i} style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.25)",color:"#ff9eb5",padding:"5px 12px",borderRadius:100,fontSize:12}}>✗ {m}</div>
+                    <div key={i} style={{background:"rgba(255,101,132,0.08)",border:"1px solid rgba(255,101,132,0.25)",color:"#ff9eb5",padding:"6px 14px",borderRadius:100,fontSize:12}}>✗ {m}</div>
                   ))}
                 </div>
               </div>}
             </div>
 
+            {/* Resume Output */}
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
                 <h2 style={{margin:0,fontSize:18,fontWeight:700}}>📄 Your Resume — {form.country}</h2>
-                <button onClick={()=>{navigator.clipboard.writeText(result.resume);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13}}>{copied?"✓ Copied!":"⎘ Copy Resume"}</button>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{navigator.clipboard.writeText(result.resume);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>{copied?"✓ Copied!":"⎘ Copy Resume"}</button>
+                </div>
               </div>
-              <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:20,fontSize:13,lineHeight:1.8,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"inherit",minHeight:200}}>{result.resume}</pre>
+              <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:24,fontSize:13,lineHeight:1.9,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"'Courier New', monospace",minHeight:200}}>{result.resume}</pre>
+              <div style={{marginTop:12,fontSize:12,color:"#4a4a6a"}}>💡 Copy this resume and paste into Microsoft Word or Google Docs for final formatting before sending.</div>
             </div>
           </div>}
         </>}
 
+        {/* ATS Checker Tab */}
         {tab==="ats"&&<div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
-          <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:16}}>ATS Score Checker</div>
-          <p style={{color:"#7878a0",fontSize:14,marginBottom:18}}>Paste your existing resume and job description to get an instant ATS score with specific improvement tips.</p>
-          <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Your Resume Text</label><textarea rows={8} placeholder="Paste your resume here..." value={atsResumeText} onChange={e=>setAtsResumeText(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
-          <div style={{marginBottom:18}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Job Description</label><textarea rows={5} placeholder="Paste the job description..." value={atsJobDesc} onChange={e=>setAtsJobDesc(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
-          <button onClick={analyzeATS} disabled={atsLoading||!atsResumeText.trim()||!atsJobDesc.trim()} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:"pointer",opacity:atsLoading?0.6:1}}>
-            {atsLoading?"⚙ Analyzing...":"◎ Analyze ATS Score"}
+          <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>ATS Score Checker</div>
+          <p style={{color:"#7878a0",fontSize:14,marginBottom:20,lineHeight:1.6}}>Already have a resume? Paste it below along with the job description to instantly check your ATS score — no uploads needed!</p>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Your Resume Text</label>
+            <textarea rows={9} placeholder="Paste your complete resume text here..." value={atsResumeText} onChange={e=>setAtsResumeText(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+          </div>
+          <div style={{marginBottom:20}}>
+            <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Job Description</label>
+            <textarea rows={6} placeholder="Paste the job description you are applying to..." value={atsJobDesc} onChange={e=>setAtsJobDesc(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+          </div>
+          <button onClick={analyzeATS} disabled={atsLoading||!atsResumeText.trim()||!atsJobDesc.trim()} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:"pointer",opacity:atsLoading||!atsResumeText.trim()||!atsJobDesc.trim()?0.5:1}}>
+            {atsLoading?"⚙ Analyzing your resume...":"◎ Check My ATS Score"}
           </button>
 
+          {atsLoading&&<div style={{textAlign:"center",padding:30}}>
+            <div style={{width:40,height:40,border:"3px solid #2a2a3d",borderTopColor:"#6c63ff",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 12px"}}/>
+            <p style={{color:"#7878a0",fontSize:14}}>Analyzing your resume...</p>
+          </div>}
+
           {atsResult&&<div style={{marginTop:24}}>
-            <div style={{textAlign:"center",marginBottom:20}}>
-              <div style={{fontSize:64,fontWeight:800,color:sc(atsResult.overall)}}>{atsResult.overall}</div>
-              <div style={{fontSize:12,color:"#7878a0",marginBottom:8}}>ATS SCORE</div>
-              <div style={{display:"inline-block",background:"rgba(255,215,0,0.1)",border:"1px solid rgba(255,215,0,0.2)",color:"#ffd700",fontSize:12,fontWeight:600,padding:"3px 12px",borderRadius:100}}>{atsResult.rating}</div>
+            <div style={{textAlign:"center",marginBottom:24,padding:20,background:"#1c1c28",borderRadius:12}}>
+              <div style={{fontSize:72,fontWeight:800,color:sc(atsResult.overall),lineHeight:1}}>{atsResult.overall}</div>
+              <div style={{fontSize:13,color:"#7878a0",marginBottom:10}}>ATS COMPATIBILITY SCORE</div>
+              <div style={{display:"inline-block",background:atsResult.overall>=80?"rgba(67,233,123,0.1)":"rgba(255,215,0,0.1)",border:`1px solid ${atsResult.overall>=80?"rgba(67,233,123,0.3)":"rgba(255,215,0,0.3)"}`,color:atsResult.overall>=80?"#43e97b":"#ffd700",fontSize:13,fontWeight:700,padding:"4px 16px",borderRadius:100}}>{atsResult.rating}</div>
             </div>
-            {[["Keyword Match",atsResult.keyword,"#6c63ff"],["Formatting",atsResult.formatting,"#43e97b"],["Readability",atsResult.readability,"#ffd700"],["Skills",atsResult.skills,"#ff6584"]].map(([l,v,c])=>(
-              <div key={l} style={{marginBottom:8}}>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#7878a0",marginBottom:3}}><span>{l}</span><span>{v}%</span></div>
-                <div style={{height:5,background:"#2a2a3d",borderRadius:100}}><div style={{height:"100%",width:`${v}%`,background:c,borderRadius:100}}/></div>
-              </div>
-            ))}
-            {atsResult.tips?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:16,marginTop:16}}>
-              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:"#6c63ff",marginBottom:12}}>💡 Improvement Tips</div>
+
+            <div style={{marginBottom:20}}>
+              {[["Keyword Match",atsResult.keyword,"#6c63ff"],["Formatting",atsResult.formatting,"#43e97b"],["Readability",atsResult.readability,"#ffd700"],["Skills Coverage",atsResult.skills,"#ff6584"]].map(([l,v,c])=>(
+                <div key={l} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#7878a0",marginBottom:4}}><span>{l}</span><span style={{color:c,fontWeight:600}}>{v}%</span></div>
+                  <div style={{height:6,background:"#2a2a3d",borderRadius:100}}><div style={{height:"100%",width:`${v}%`,background:c,borderRadius:100}}/></div>
+                </div>
+              ))}
+            </div>
+
+            {atsResult.tips?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:18,marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:"#6c63ff",marginBottom:14,letterSpacing:"0.08em"}}>💡 Improvement Tips</div>
               {atsResult.tips.map((t,i)=>(
-                <div key={i} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
-                  <div style={{background:"rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
-                  <div style={{fontSize:13,color:"#f0f0f8",lineHeight:1.5}}>{t}</div>
+                <div key={i} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}>
+                  <div style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
+                  <div style={{fontSize:13,color:"#e0e0f0",lineHeight:1.6}}>{t}</div>
                 </div>
               ))}
             </div>}
-            {atsResult.missing_keywords?.length>0&&<div style={{marginTop:12}}>
-              <div style={{fontSize:11,color:"#ff6584",marginBottom:8,textTransform:"uppercase",fontWeight:700}}>Missing Keywords</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{atsResult.missing_keywords.map(k=><div key={k} style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff9eb5",padding:"4px 10px",borderRadius:100,fontSize:12}}>{k}</div>)}</div>
+
+            {atsResult.missing_keywords?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(255,101,132,0.15)",borderRadius:12,padding:18}}>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:"#ff6584",marginBottom:12,letterSpacing:"0.08em"}}>🔍 Missing Keywords</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {atsResult.missing_keywords.map(k=><div key={k} style={{background:"rgba(255,101,132,0.08)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff9eb5",padding:"5px 12px",borderRadius:100,fontSize:12}}>+ {k}</div>)}
+              </div>
             </div>}
           </div>}
         </div>}
