@@ -19,17 +19,31 @@ export default async function handler(req, res) {
     });
     
     const data = await response.json();
-    let text = data?.content?.[0]?.text || data?.error?.message || JSON.stringify(data);
+    let rawText = data?.content?.[0]?.text || data?.error?.message || JSON.stringify(data);
     
-    // Clean markdown symbols
-    text = text
+    // Split ATS data FIRST before cleaning
+    let resumeText = rawText;
+    let atsData = null;
+    
+    if (rawText.includes('---ATS_DATA---')) {
+      const parts = rawText.split('---ATS_DATA---');
+      resumeText = parts[0];
+      try {
+        const jsonStr = parts[1].replace(/```json|```/g, '').trim();
+        atsData = JSON.parse(jsonStr);
+      } catch(e) {}
+    }
+    
+    // Clean markdown from resume only
+    resumeText = resumeText
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*/g, '')
       .replace(/\*/g, '')
-      .replace(/---/g, '─────────────────────────')
-      .replace(/•/g, '-');
+      .replace(/^---$/gm, '─────────────────────')
+      .trim();
     
-    res.status(200).json({ text });
+    res.status(200).json({ text: resumeText, ats: atsData });
+    
   } catch (error) {
     res.status(500).json({ text: "Error: " + error.message });
   }
