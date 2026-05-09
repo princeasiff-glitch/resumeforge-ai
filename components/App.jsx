@@ -81,7 +81,7 @@ STRICT FORMATTING RULES:
 4. Use plain hyphen (-) for bullet points
 5. Do NOT mention work rights or sponsorship in Professional Summary
 6. Only mention work rights in a separate section at the bottom
-7. Use exact phone number provided: ${form.phone}
+7. Phone number in resume should use the exact number provided: ${form.phone}
 8. Use realistic date format: Month Year – Month Year
 9. Separate sections with one blank line only
 
@@ -152,6 +152,11 @@ ${atsJobDesc}`;
     <div style={{fontFamily:"system-ui,sans-serif",background:"#0a0a0f",minHeight:"100vh",color:"#f0f0f8",padding:"20px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
 
+        {/* Upgrade Button */}
+        <div style={{textAlign:"right",marginBottom:8}}>
+          <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",padding:"8px 20px",borderRadius:100,fontSize:13,fontWeight:700,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 15px rgba(108,99,255,0.3)"}}>💎 Upgrade to Pro</a>
+        </div>
+
         {/* Header */}
         <div style={{textAlign:"center",padding:"40px 0 32px"}}>
           <div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",color:"#a89fff",fontSize:12,padding:"4px 14px",borderRadius:100,marginBottom:16}}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
@@ -175,20 +180,10 @@ ${atsJobDesc}`;
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Personal Information</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-
-              {/* Name */}
               <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Full Name *</label><input placeholder="Mohammed Asif" value={form.fullName} onChange={e=>set("fullName",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-
-              {/* Email */}
               <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Email</label><input placeholder="email@example.com" value={form.email} onChange={e=>set("email",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-
-              {/* City */}
               <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>City</label><input placeholder="e.g. Hyderabad, Dubai" value={form.city} onChange={e=>set("city",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-
-              {/* LinkedIn */}
               <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>LinkedIn URL</label><input placeholder="linkedin.com/in/yourname" value={form.linkedIn} onChange={e=>set("linkedIn",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-
-              {/* Current Location */}
               <div>
                 <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Your Current Country</label>
                 <select value={form.currentLocation} onChange={e=>set("currentLocation",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}>
@@ -196,16 +191,10 @@ ${atsJobDesc}`;
                   {COUNTRIES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-
-              {/* Phone with current location hint */}
               <div>
-                <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>
-                  Phone {currentPhoneCode&&<span style={{color:"#6c63ff",fontWeight:700}}>({currentPhoneCode})</span>}
-                </label>
+                <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Phone {currentPhoneCode&&<span style={{color:"#6c63ff",fontWeight:700}}>({currentPhoneCode})</span>}</label>
                 <input placeholder={currentPhoneCode?`${currentPhoneCode} 98765 43210`:"+91 98765 43210"} value={form.phone} onChange={e=>set("phone",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
               </div>
-
-              {/* Target Country - full width */}
               <div style={{gridColumn:"1 / -1"}}>
                 <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Country * <span style={{color:"#4a4a6a",textTransform:"none",fontSize:10}}>(Country where you want to work)</span></label>
                 <select value={form.country} onChange={e=>set("country",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}>
@@ -213,15 +202,10 @@ ${atsJobDesc}`;
                   {COUNTRIES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-
             </div>
-
-            {/* Phone hint based on CURRENT location */}
             {currentPhoneCode&&<div style={{marginTop:10,background:"rgba(108,99,255,0.08)",border:"1px solid rgba(108,99,255,0.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#a89fff"}}>
               💡 You are currently in <strong>{form.currentLocation}</strong> — your phone number should start with <strong>{currentPhoneCode}</strong>
             </div>}
-
-            {/* Relocation hint */}
             {form.currentLocation&&form.country&&form.currentLocation!==form.country&&<div style={{marginTop:8,background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#43e97b"}}>
               ✅ Building a <strong>{form.country}</strong> resume for someone currently in <strong>{form.currentLocation}</strong>
             </div>}
@@ -244,7 +228,7 @@ ${atsJobDesc}`;
             <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="e.g. Accounting Supervisor, Software Engineer" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
             <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a",fontSize:10,textTransform:"none"}}>(optional — AI will write one if blank)</span></label><textarea placeholder="Brief overview of your experience..." value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></div>
             <div>
-              <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description <span style={{color:"#43e97b",fontSize:10,textTransform:"none"}}>(Highly Recommended — boosts ATS score by 15-20 points!)</span></label>
+              <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description <span style={{color:"#43e97b",fontSize:10,textTransform:"none"}}>(Boosts ATS score by 15-20 points!)</span></label>
               <textarea placeholder="Paste the full job description here..." value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:120,resize:"vertical",boxSizing:"border-box"}}/>
             </div>
           </div>
@@ -351,6 +335,15 @@ ${atsJobDesc}`;
               <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:24,fontSize:13,lineHeight:1.9,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"'Courier New',monospace",minHeight:200}}>{result.resume}</pre>
               <div style={{marginTop:12,fontSize:12,color:"#4a4a6a"}}>💡 Copy this resume and paste into Microsoft Word or Google Docs for final formatting.</div>
             </div>
+
+            {/* Upsell Banner */}
+            <div style={{background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(155,89,245,0.15))",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:20,marginTop:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#f0f0f8",marginBottom:4}}>💎 Want unlimited resumes + full ATS analysis?</div>
+                <div style={{fontSize:13,color:"#7878a0"}}>Upgrade to Pro for just ₹299/month or ₹2999 lifetime!</div>
+              </div>
+              <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",padding:"10px 24px",borderRadius:100,fontSize:14,fontWeight:700,textDecoration:"none",display:"inline-block",whiteSpace:"nowrap"}}>View Plans →</a>
+            </div>
           </div>}
         </>}
 
@@ -396,6 +389,15 @@ ${atsJobDesc}`;
                 {atsResult.missing_keywords.map(k=><div key={k} style={{background:"rgba(255,101,132,0.08)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff9eb5",padding:"5px 12px",borderRadius:100,fontSize:12}}>+ {k}</div>)}
               </div>
             </div>}
+
+            {/* Upsell in ATS tab */}
+            <div style={{background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(155,89,245,0.15))",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:20,marginTop:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#f0f0f8",marginBottom:4}}>💎 Want to build an ATS-optimized resume?</div>
+                <div style={{fontSize:13,color:"#7878a0"}}>Upgrade to Pro and generate unlimited resumes!</div>
+              </div>
+              <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",padding:"10px 24px",borderRadius:100,fontSize:14,fontWeight:700,textDecoration:"none",display:"inline-block",whiteSpace:"nowrap"}}>View Plans →</a>
+            </div>
           </div>}
         </div>}
 
