@@ -3,13 +3,13 @@ import { useState } from "react";
 const COUNTRIES = ["United States","United Kingdom","India","Canada","Australia","Germany","France","UAE","Singapore","South Africa","Nigeria","Brazil","Japan","South Korea","Netherlands","Sweden","New Zealand","Malaysia","Philippines","Kenya","Pakistan","Bangladesh","Sri Lanka","Ireland","Italy","Spain","Portugal","Poland","Mexico","Argentina"];
 
 const COUNTRY_FIELDS = {
-  "UAE":[{key:"nationality",label:"Nationality",placeholder:"e.g. Indian, Pakistani"},{key:"visaStatus",label:"Visa Status",placeholder:"Employment Visa / Visit Visa / Own Visa"},{key:"languages",label:"Languages Known",placeholder:"English, Arabic, Hindi"}],
-  "United Kingdom":[{key:"rightToWork",label:"Right to Work",placeholder:"British Citizen / Skilled Worker Visa / Graduate Visa"},{key:"languages",label:"Languages",placeholder:"English, French..."}],
-  "Australia":[{key:"rightToWork",label:"Work Rights",placeholder:"Australian Citizen / PR / Skilled Visa 482 / Sponsorship Required"},{key:"languages",label:"Languages",placeholder:"English, Mandarin..."}],
-  "Canada":[{key:"rightToWork",label:"Work Authorization",placeholder:"Canadian Citizen / PR / Work Permit"},{key:"languages",label:"Languages",placeholder:"English, French..."}],
-  "United States":[{key:"rightToWork",label:"Work Authorization",placeholder:"US Citizen / Green Card / H1B / OPT"},{key:"languages",label:"Languages",placeholder:"English, Spanish..."}],
-  "Germany":[{key:"rightToWork",label:"Work Permit",placeholder:"EU Citizen / Work Permit / Blue Card"},{key:"languages",label:"Languages",placeholder:"German, English..."}],
-  "Singapore":[{key:"rightToWork",label:"Work Pass",placeholder:"Singapore PR / EP / S Pass / Work Permit"},{key:"languages",label:"Languages",placeholder:"English, Mandarin..."}],
+  "UAE":[{key:"nationality",label:"Nationality",placeholder:""},{key:"visaStatus",label:"Visa Status",placeholder:""},{key:"languages",label:"Languages Known",placeholder:""}],
+  "United Kingdom":[{key:"rightToWork",label:"Right to Work",placeholder:""},{key:"languages",label:"Languages",placeholder:""}],
+  "Australia":[{key:"rightToWork",label:"Work Rights",placeholder:""},{key:"languages",label:"Languages",placeholder:""}],
+  "Canada":[{key:"rightToWork",label:"Work Authorization",placeholder:""},{key:"languages",label:"Languages",placeholder:""}],
+  "United States":[{key:"rightToWork",label:"Work Authorization",placeholder:""},{key:"languages",label:"Languages",placeholder:""}],
+  "Germany":[{key:"rightToWork",label:"Work Permit",placeholder:""},{key:"languages",label:"Languages",placeholder:""}],
+  "Singapore":[{key:"rightToWork",label:"Work Pass",placeholder:""},{key:"languages",label:"Languages",placeholder:""}],
 };
 
 const COUNTRY_PHONE = {
@@ -180,25 +180,25 @@ ${atsJobDesc}`;
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Personal Information</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Full Name *</label><input placeholder="Mohammed Asif" value={form.fullName} onChange={e=>set("fullName",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Email</label><input placeholder="email@example.com" value={form.email} onChange={e=>set("email",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>City</label><input placeholder="e.g. Hyderabad, Dubai" value={form.city} onChange={e=>set("city",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>LinkedIn URL</label><input placeholder="linkedin.com/in/yourname" value={form.linkedIn} onChange={e=>set("linkedIn",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
+              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Full Name *</label><input placeholder="" value={form.fullName} onChange={e=>set("fullName",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
+              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Email</label><input placeholder="" value={form.email} onChange={e=>set("email",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
+              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>City</label><input placeholder="" value={form.city} onChange={e=>set("city",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
+              <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>LinkedIn URL</label><input placeholder="" value={form.linkedIn} onChange={e=>set("linkedIn",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
               <div>
                 <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Your Current Country</label>
                 <select value={form.currentLocation} onChange={e=>set("currentLocation",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}>
-                  <option value="">Where are you now?</option>
+                  <option value="">Select your current country</option>
                   {COUNTRIES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Phone {currentPhoneCode&&<span style={{color:"#6c63ff",fontWeight:700}}>({currentPhoneCode})</span>}</label>
-                <input placeholder={currentPhoneCode?`${currentPhoneCode} 98765 43210`:"+91 98765 43210"} value={form.phone} onChange={e=>set("phone",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
+                <input placeholder="" value={form.phone} onChange={e=>set("phone",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
               </div>
               <div style={{gridColumn:"1 / -1"}}>
                 <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Country * <span style={{color:"#4a4a6a",textTransform:"none",fontSize:10}}>(Country where you want to work)</span></label>
                 <select value={form.country} onChange={e=>set("country",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}>
-                  <option value="">Select target country...</option>
+                  <option value="">Select target country</option>
                   {COUNTRIES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
@@ -217,7 +217,7 @@ ${atsJobDesc}`;
             <div style={{fontSize:12,color:"#7878a0",marginBottom:16}}>These fields are required for {form.country} job applications and boost your ATS score.</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
               {extraFields.map(f=>(
-                <div key={f.key}><label style={{fontSize:11,color:"#a89fff",display:"block",marginBottom:5,textTransform:"uppercase"}}>{f.label}</label><input placeholder={f.placeholder} value={form[f.key]||""} onChange={e=>set(f.key,e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid rgba(108,99,255,0.3)",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
+                <div key={f.key}><label style={{fontSize:11,color:"#a89fff",display:"block",marginBottom:5,textTransform:"uppercase"}}>{f.label}</label><input placeholder="" value={form[f.key]||""} onChange={e=>set(f.key,e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid rgba(108,99,255,0.3)",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
               ))}
             </div>
           </div>}
@@ -225,11 +225,11 @@ ${atsJobDesc}`;
           {/* Target Role */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Target Role</div>
-            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="e.g. Accounting Supervisor, Software Engineer" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a",fontSize:10,textTransform:"none"}}>(optional — AI will write one if blank)</span></label><textarea placeholder="Brief overview of your experience..." value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></div>
+            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
+            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a",fontSize:10,textTransform:"none"}}>(optional — AI will write one if blank)</span></label><textarea placeholder="" value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></div>
             <div>
               <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description <span style={{color:"#43e97b",fontSize:10,textTransform:"none"}}>(Boosts ATS score by 15-20 points!)</span></label>
-              <textarea placeholder="Paste the full job description here..." value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:120,resize:"vertical",boxSizing:"border-box"}}/>
+              <textarea placeholder="" value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:120,resize:"vertical",boxSizing:"border-box"}}/>
             </div>
           </div>
 
@@ -237,7 +237,7 @@ ${atsJobDesc}`;
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Skills</div>
             <div style={{display:"flex",gap:10}}>
-              <input placeholder="Type a skill and press Enter or click +" value={skillInput} onChange={e=>setSkillInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSkill()} style={{flex:1,background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}/>
+              <input placeholder="" value={skillInput} onChange={e=>setSkillInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSkill()} style={{flex:1,background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none"}}/>
               <button onClick={addSkill} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:8,padding:"0 20px",cursor:"pointer",fontSize:22,fontWeight:300}}>+</button>
             </div>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12}}>
@@ -253,11 +253,11 @@ ${atsJobDesc}`;
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
                 {experiences.length>1&&<button onClick={()=>setExperiences(ex=>ex.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
-                  {[["Company","company","e.g. Emirates NBD"],["Role / Title","role","Accounting Supervisor"],["Duration","duration","Jan 2020 – Dec 2024"]].map(([l,k,p])=>(
-                    <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder={p} value={exp[k]} onChange={e=>updateExp(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
+                  {[["Company","company"],["Role / Title","role"],["Duration","duration"]].map(([l,k])=>(
+                    <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder="" value={exp[k]} onChange={e=>updateExp(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
                   ))}
                 </div>
-                <textarea placeholder="Describe key responsibilities and achievements. Include numbers e.g. 'Managed team of 5', 'Reduced costs by 20%'..." value={exp.description} onChange={e=>updateExp(i,"description",e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",minHeight:90,resize:"vertical",boxSizing:"border-box"}}/>
+                <textarea placeholder="" value={exp.description} onChange={e=>updateExp(i,"description",e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",minHeight:90,resize:"vertical",boxSizing:"border-box"}}/>
               </div>
             ))}
             <button onClick={()=>setExperiences(ex=>[...ex,{company:"",role:"",duration:"",description:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Experience</button>
@@ -270,8 +270,8 @@ ${atsJobDesc}`;
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
                 {education.length>1&&<button onClick={()=>setEducation(ed=>ed.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
-                  {[["Institution","institution","e.g. Federation University"],["Degree / Qualification","degree","Master of Professional Accounting"],["Year","year","2007 – 2009"]].map(([l,k,p])=>(
-                    <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder={p} value={edu[k]} onChange={e=>updateEdu(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
+                  {[["Institution","institution"],["Degree / Qualification","degree"],["Year","year"]].map(([l,k])=>(
+                    <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder="" value={edu[k]} onChange={e=>updateEdu(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
                   ))}
                 </div>
               </div>
@@ -351,8 +351,8 @@ ${atsJobDesc}`;
         {tab==="ats"&&<div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
           <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>ATS Score Checker</div>
           <p style={{color:"#7878a0",fontSize:14,marginBottom:20,lineHeight:1.6}}>Already have a resume? Paste it below along with the job description to instantly check your ATS score!</p>
-          <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Your Resume Text</label><textarea rows={9} placeholder="Paste your complete resume text here..." value={atsResumeText} onChange={e=>setAtsResumeText(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
-          <div style={{marginBottom:20}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Job Description</label><textarea rows={6} placeholder="Paste the job description you are applying to..." value={atsJobDesc} onChange={e=>setAtsJobDesc(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
+          <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Your Resume Text</label><textarea rows={9} placeholder="" value={atsResumeText} onChange={e=>setAtsResumeText(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
+          <div style={{marginBottom:20}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Job Description</label><textarea rows={6} placeholder="" value={atsJobDesc} onChange={e=>setAtsJobDesc(e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
           <button onClick={analyzeATS} disabled={atsLoading||!atsResumeText.trim()||!atsJobDesc.trim()} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:"pointer",opacity:atsLoading||!atsResumeText.trim()||!atsJobDesc.trim()?0.5:1}}>
             {atsLoading?"⚙ Analyzing your resume...":"◎ Check My ATS Score"}
           </button>
