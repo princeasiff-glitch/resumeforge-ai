@@ -90,7 +90,7 @@ export default function Pricing() {
         razorpay.open();
       } else {
         // Stripe for international users
-        alert("Stripe integration coming soon! Please contact us at princeasiff@gmail.com to upgrade.");
+        alert("Stripe integration coming soon! Please contact us at resumeforgeai.support@gmail.com to upgrade.");
       }
     } catch(e) {
       alert("Payment failed: " + e.message);
