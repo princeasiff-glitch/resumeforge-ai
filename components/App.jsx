@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const COUNTRIES = ["United States","United Kingdom","India","Canada","Australia","Germany","France","UAE","Singapore","South Africa","Nigeria","Brazil","Japan","South Korea","Netherlands","Sweden","New Zealand","Malaysia","Philippines","Kenya","Pakistan","Bangladesh","Sri Lanka","Ireland","Italy","Spain","Portugal","Poland","Mexico","Argentina"];
 
@@ -23,6 +23,8 @@ const COUNTRY_PHONE = {
   "Mexico":"+52","Argentina":"+54"
 };
 
+const SUPPORT_EMAIL = "resumeforgeai.support@gmail.com";
+
 export default function App() {
   const [tab, setTab] = useState("builder");
   const [loading, setLoading] = useState(false);
@@ -39,6 +41,32 @@ export default function App() {
   const [experiences, setExperiences] = useState([{company:"",role:"",duration:"",description:""}]);
   const [education, setEducation] = useState([{institution:"",degree:"",year:""}]);
 
+  // Fix 5 — Load saved resume from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("resumeforge_result");
+      const savedForm = localStorage.getItem("resumeforge_form");
+      const savedSkills = localStorage.getItem("resumeforge_skills");
+      const savedExp = localStorage.getItem("resumeforge_experiences");
+      const savedEdu = localStorage.getItem("resumeforge_education");
+      if(saved) setResult(JSON.parse(saved));
+      if(savedForm) setForm(JSON.parse(savedForm));
+      if(savedSkills) setSkills(JSON.parse(savedSkills));
+      if(savedExp) setExperiences(JSON.parse(savedExp));
+      if(savedEdu) setEducation(JSON.parse(savedEdu));
+    } catch {}
+  }, []);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("resumeforge_form", JSON.stringify(form));
+      localStorage.setItem("resumeforge_skills", JSON.stringify(skills));
+      localStorage.setItem("resumeforge_experiences", JSON.stringify(experiences));
+      localStorage.setItem("resumeforge_education", JSON.stringify(education));
+    } catch {}
+  }, [form, skills, experiences, education]);
+
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const addSkill = () => { if(skillInput.trim()&&!skills.includes(skillInput.trim())){setSkills(s=>[...s,skillInput.trim()]);setSkillInput("");} };
   const updateExp = (i,k,v) => setExperiences(ex=>ex.map((e,idx)=>idx===i?{...e,[k]:v}:e));
@@ -46,12 +74,29 @@ export default function App() {
   const extraFields = COUNTRY_FIELDS[form.country] || [];
   const currentPhoneCode = form.currentLocation ? (COUNTRY_PHONE[form.currentLocation] || "") : "";
 
+  const clearAll = () => {
+    setForm({fullName:"",email:"",phone:"",country:"",currentLocation:"",city:"",linkedIn:"",jobTitle:"",summary:"",jobDescription:"",nationality:"",visaStatus:"",languages:"",rightToWork:""});
+    setSkills([]);
+    setExperiences([{company:"",role:"",duration:"",description:""}]);
+    setEducation([{institution:"",degree:"",year:""}]);
+    setResult(null);
+    try {
+      localStorage.removeItem("resumeforge_result");
+      localStorage.removeItem("resumeforge_form");
+      localStorage.removeItem("resumeforge_skills");
+      localStorage.removeItem("resumeforge_experiences");
+      localStorage.removeItem("resumeforge_education");
+    } catch {}
+  };
+
   const generate = async () => {
     if(!form.fullName||!form.country||!form.jobTitle){setError("Please fill Name, Target Country, and Job Title.");return;}
     setError("");setLoading(true);setResult(null);
     try {
       const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join("\n");
       const prompt = `Write a polished professional resume for ${form.country} job market. Follow exact resume conventions for ${form.country}.
+
+IMPORTANT: Use EXACTLY the information provided by the candidate. Do NOT change, invent or modify any details about their experience, roles, responsibilities or achievements. Only make the language more polished and professional.
 
 CANDIDATE DETAILS:
 Name: ${form.fullName}
@@ -63,13 +108,13 @@ Target Role: ${form.jobTitle}
 Skills: ${skills.join(", ")||"Not specified"}
 ${countryExtra}
 
-WORK EXPERIENCE:
+WORK EXPERIENCE (use exactly as provided, only polish the language):
 ${experiences.map(e=>`Role: ${e.role}\nCompany: ${e.company}\nDuration: ${e.duration}\nDetails: ${e.description}`).join("\n\n")}
 
 EDUCATION:
 ${education.map(e=>`${e.degree} | ${e.institution} | ${e.year}`).join("\n")}
 
-PROFESSIONAL SUMMARY PROVIDED: ${form.summary||"Please generate a strong professional summary based on the experience above"}
+PROFESSIONAL SUMMARY: ${form.summary||"Generate a strong professional summary based ONLY on the experience details provided above"}
 
 JOB DESCRIPTION TO MATCH FOR ATS:
 ${form.jobDescription||"General professional role"}
@@ -84,6 +129,7 @@ STRICT FORMATTING RULES:
 7. Phone number in resume should use the exact number provided: ${form.phone}
 8. Use realistic date format: Month Year – Month Year
 9. Separate sections with one blank line only
+10. NEVER invent or add experience/skills/achievements not provided by the candidate
 
 After the complete resume write exactly:
 ---ATS_DATA---
@@ -108,7 +154,10 @@ Then ONLY this JSON with real calculated scores:
       }
 
       if(!resumeText||resumeText.length<50) resumeText = data?.text||"No resume generated. Please try again.";
-      setResult({resume:resumeText,ats});
+      const newResult = {resume:resumeText,ats};
+      setResult(newResult);
+      // Save result to localStorage
+      try { localStorage.setItem("resumeforge_result", JSON.stringify(newResult)); } catch {}
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
   };
@@ -178,7 +227,10 @@ ${atsJobDesc}`;
 
           {/* Personal Info */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
-            <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Personal Information</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff"}}>Personal Information</div>
+              <button onClick={clearAll} style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:8,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>🗑 Clear All & Start Fresh</button>
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
               <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Full Name *</label><input placeholder="" value={form.fullName} onChange={e=>set("fullName",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
               <div><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Email</label><input placeholder="" value={form.email} onChange={e=>set("email",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
@@ -226,7 +278,13 @@ ${atsJobDesc}`;
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Target Role</div>
             <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-            <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a",fontSize:10,textTransform:"none"}}>(optional — AI will write one if blank)</span></label><textarea placeholder="" value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></div>
+            <div style={{marginBottom:14}}>
+              <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a",fontSize:10,textTransform:"none"}}>(optional — AI will write one if blank)</span></label>
+              <div style={{background:"rgba(108,99,255,0.05)",border:"1px solid rgba(108,99,255,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:8,lineHeight:1.6}}>
+                💡 <strong style={{color:"#a89fff"}}>Tip:</strong> Write your own summary for best results. Include your years of experience, key strengths and career goals. The AI will only polish your language, not change your story.
+              </div>
+              <textarea placeholder="" value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
             <div>
               <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Paste Job Description <span style={{color:"#43e97b",fontSize:10,textTransform:"none"}}>(Boosts ATS score by 15-20 points!)</span></label>
               <textarea placeholder="" value={form.jobDescription} onChange={e=>set("jobDescription",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:120,resize:"vertical",boxSizing:"border-box"}}/>
@@ -248,7 +306,10 @@ ${atsJobDesc}`;
 
           {/* Experience */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
-            <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Work Experience</div>
+            <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>Work Experience</div>
+            <div style={{background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:16,lineHeight:1.6}}>
+              💡 <strong style={{color:"#43e97b"}}>Important:</strong> Fill in YOUR actual experience, roles and achievements. The AI will only polish the language — it will NOT change or invent details. The more specific you are, the better and more personal your resume will be!
+            </div>
             {experiences.map((exp,i)=>(
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
                 {experiences.length>1&&<button onClick={()=>setExperiences(ex=>ex.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>}
@@ -257,7 +318,8 @@ ${atsJobDesc}`;
                     <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder="" value={exp[k]} onChange={e=>updateExp(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
                   ))}
                 </div>
-                <textarea placeholder="" value={exp.description} onChange={e=>updateExp(i,"description",e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",minHeight:90,resize:"vertical",boxSizing:"border-box"}}/>
+                <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>Your Actual Responsibilities & Achievements</label>
+                <textarea placeholder="" value={exp.description} onChange={e=>updateExp(i,"description",e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/>
               </div>
             ))}
             <button onClick={()=>setExperiences(ex=>[...ex,{company:"",role:"",duration:"",description:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Experience</button>
@@ -330,7 +392,10 @@ ${atsJobDesc}`;
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
                 <h2 style={{margin:0,fontSize:18,fontWeight:700}}>📄 Your Resume — {form.country}</h2>
-                <button onClick={()=>{navigator.clipboard.writeText(result.resume);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>{copied?"✓ Copied!":"⎘ Copy Resume"}</button>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{navigator.clipboard.writeText(result.resume);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>{copied?"✓ Copied!":"⎘ Copy Resume"}</button>
+                  <button onClick={clearAll} style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>🗑 Start New</button>
+                </div>
               </div>
               <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:24,fontSize:13,lineHeight:1.9,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"'Courier New',monospace",minHeight:200}}>{result.resume}</pre>
               <div style={{marginTop:12,fontSize:12,color:"#4a4a6a"}}>💡 Copy this resume and paste into Microsoft Word or Google Docs for final formatting.</div>
@@ -400,6 +465,11 @@ ${atsJobDesc}`;
             </div>
           </div>}
         </div>}
+
+        {/* Footer */}
+        <div style={{textAlign:"center",padding:"32px 0 16px",borderTop:"1px solid #2a2a3d",marginTop:32}}>
+          <div style={{fontSize:12,color:"#4a4a6a"}}>Need help? Contact us at <a href={`mailto:${SUPPORT_EMAIL}`} style={{color:"#6c63ff",textDecoration:"none"}}>{SUPPORT_EMAIL}</a></div>
+        </div>
 
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
