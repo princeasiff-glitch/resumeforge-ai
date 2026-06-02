@@ -40,7 +40,6 @@ export default function Pricing() {
   const [detecting, setDetecting] = useState(true);
   const router = useRouter();
 
-  // Auto detect country on page load
   useEffect(() => {
     const detectCountry = async () => {
       try {
@@ -52,7 +51,7 @@ export default function Pricing() {
           setCurrency("USD");
         }
       } catch {
-        setCurrency("USD"); // default to USD if detection fails
+        setCurrency("USD");
       }
       setDetecting(false);
     };
@@ -64,34 +63,33 @@ export default function Pricing() {
     if (amount === 0) { router.push("/"); return; }
     setLoading(plan.name);
     try {
-      if (currency === "INR") {
-        // Razorpay for Indian users
-        const res = await fetch("/api/payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: plan.priceINR, plan: plan.name })
-        });
-        const data = await res.json();
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: data.amount * 100,
-          currency: "INR",
-          name: "ResumeForge AI",
-          description: plan.name,
-          order_id: data.orderId,
-          handler: function(response) {
-            alert("🎉 Payment Successful! Welcome to " + plan.name + "!");
-            router.push("/");
-          },
-          prefill: { name: "", email: "", contact: "" },
-          theme: { color: "#6c63ff" }
-        };
-        const razorpay = new window.Razorpay(options);
-        razorpay.open();
-      } else {
-        // Stripe for international users
-        alert("Stripe integration coming soon! Please contact us at resumeforgeai.support@gmail.com to upgrade.");
-      }
+      // Use Razorpay for both INR and USD
+      const res = await fetch("/api/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: currency === "INR" ? plan.priceINR : plan.priceUSD,
+          currency: currency === "INR" ? "INR" : "USD",
+          plan: plan.name
+        })
+      });
+      const data = await res.json();
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: data.amount * 100,
+        currency: data.currency,
+        name: "ResumeForge AI",
+        description: plan.name,
+        order_id: data.orderId,
+        handler: function(response) {
+          alert("🎉 Payment Successful! Welcome to " + plan.name + "!\n\nPlease contact resumeforgeai.support@gmail.com with your payment ID to activate your account:\n" + response.razorpay_payment_id);
+          router.push("/");
+        },
+        prefill: { name: "", email: "", contact: "" },
+        theme: { color: "#6c63ff" }
+      };
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
     } catch(e) {
       alert("Payment failed: " + e.message);
     }
@@ -110,7 +108,7 @@ export default function Pricing() {
             <h1 style={{fontSize:"clamp(28px,5vw,48px)",fontWeight:800,background:"linear-gradient(135deg,#fff 30%,#a89fff 70%,#ff6584 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"0 0 12px"}}>Choose Your Plan</h1>
             <p style={{color:"#7878a0",fontSize:16,margin:"0 0 24px"}}>Start free, upgrade when you need more</p>
 
-            {/* Currency indicator */}
+            {/* Currency Toggle */}
             {detecting ? (
               <div style={{fontSize:13,color:"#7878a0"}}>🌍 Detecting your location...</div>
             ) : (
@@ -144,7 +142,7 @@ export default function Pricing() {
                     ) : (
                       <>
                         <span style={{fontSize:42,fontWeight:800,color:"#f0f0f8"}}>
-                          {currency==="INR" ? (plan.priceINR===0?"Free":`₹${plan.priceINR}`) : (plan.priceUSD===0?"Free":`$${plan.priceUSD}`)}
+                          {currency==="INR"?(plan.priceINR===0?"Free":`₹${plan.priceINR}`):(plan.priceUSD===0?"Free":`$${plan.priceUSD}`)}
                         </span>
                         {(currency==="INR"?plan.priceINR:plan.priceUSD)>0&&<span style={{fontSize:13,color:"#7878a0"}}>/{plan.period}</span>}
                       </>
@@ -173,8 +171,9 @@ export default function Pricing() {
             <div style={{fontSize:12,color:"#7878a0",marginBottom:12,textTransform:"uppercase",letterSpacing:"0.05em"}}>Accepted Payment Methods</div>
             <div style={{display:"flex",justifyContent:"center",gap:16,flexWrap:"wrap"}}>
               {[
-                {icon:"💳",label:"Credit/Debit Cards"},
                 {icon:"📱",label:"UPI (GPay, PhonePe, Paytm)"},
+                {icon:"💳",label:"Credit/Debit Cards"},
+                {icon:"🌍",label:"International Cards"},
                 {icon:"🏦",label:"Net Banking"},
                 {icon:"💰",label:"Wallets"},
               ].map((m,i)=>(
@@ -199,15 +198,21 @@ export default function Pricing() {
             <div style={{fontSize:14,fontWeight:700,color:"#6c63ff",marginBottom:16,textTransform:"uppercase",letterSpacing:"0.08em"}}>Frequently Asked Questions</div>
             {[
               {q:"Can I cancel anytime?",a:"Yes! For monthly plans you can cancel anytime. No questions asked."},
-              {q:"What payment methods are accepted?",a:"Indian users can pay via UPI, Credit/Debit cards, Net Banking and Wallets. International users can pay via Credit/Debit cards."},
-              {q:"Is my payment secure?",a:"Yes! Payments are processed by Razorpay (India) and Stripe (International) — both are PCI DSS compliant and fully secure."},
-              {q:"What happens after I pay?",a:"You get instant access to all Pro features immediately after payment."},
+              {q:"What payment methods are accepted?",a:"UPI (GPay, PhonePe, Paytm), Credit/Debit cards, Net Banking, Wallets and International cards are all accepted."},
+              {q:"Is my payment secure?",a:"Yes! All payments are processed by Razorpay — PCI DSS compliant and fully secure."},
+              {q:"What happens after I pay?",a:"You get instant access to all Pro features. Contact resumeforgeai.support@gmail.com with your payment ID if needed."},
+              {q:"Do you accept international payments?",a:"Yes! We accept international credit and debit cards from all countries."},
             ].map((faq,i)=>(
-              <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<3?"1px solid #2a2a3d":"none"}}>
+              <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<4?"1px solid #2a2a3d":"none"}}>
                 <div style={{fontSize:14,fontWeight:600,color:"#f0f0f8",marginBottom:6}}>❓ {faq.q}</div>
                 <div style={{fontSize:13,color:"#7878a0",lineHeight:1.6}}>{faq.a}</div>
               </div>
             ))}
+          </div>
+
+          {/* Support */}
+          <div style={{textAlign:"center",marginBottom:24}}>
+            <div style={{fontSize:13,color:"#7878a0"}}>Need help? Contact us at <a href="mailto:resumeforgeai.support@gmail.com" style={{color:"#6c63ff",textDecoration:"none"}}>resumeforgeai.support@gmail.com</a></div>
           </div>
 
           {/* Back button */}
