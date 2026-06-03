@@ -24,6 +24,7 @@ const COUNTRY_PHONE = {
 };
 
 const SUPPORT_EMAIL = "resumeforgeai.support@gmail.com";
+const FREE_LIMIT = 2;
 
 export default function App() {
   const [tab, setTab] = useState("builder");
@@ -41,7 +42,14 @@ export default function App() {
   const [experiences, setExperiences] = useState([{company:"",role:"",duration:"",description:""}]);
   const [education, setEducation] = useState([{institution:"",degree:"",year:""}]);
 
-  // Fix 5 — Load saved resume from localStorage on mount
+  // Email tracking states
+  const [showEmailPopup, setShowEmailPopup] = useState(false);
+  const [trackingEmail, setTrackingEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [resumesRemaining, setResumesRemaining] = useState(FREE_LIMIT);
+  const [limitReached, setLimitReached] = useState(false);
+
+  // Load saved data
   useEffect(() => {
     try {
       const saved = localStorage.getItem("resumeforge_result");
@@ -49,15 +57,21 @@ export default function App() {
       const savedSkills = localStorage.getItem("resumeforge_skills");
       const savedExp = localStorage.getItem("resumeforge_experiences");
       const savedEdu = localStorage.getItem("resumeforge_education");
+      const savedEmail = localStorage.getItem("resumeforge_email");
+      const savedRemaining = localStorage.getItem("resumeforge_remaining");
+      const savedLimit = localStorage.getItem("resumeforge_limit");
       if(saved) setResult(JSON.parse(saved));
       if(savedForm) setForm(JSON.parse(savedForm));
       if(savedSkills) setSkills(JSON.parse(savedSkills));
       if(savedExp) setExperiences(JSON.parse(savedExp));
       if(savedEdu) setEducation(JSON.parse(savedEdu));
+      if(savedEmail) setTrackingEmail(savedEmail);
+      if(savedRemaining) setResumesRemaining(parseInt(savedRemaining));
+      if(savedLimit === "true") setLimitReached(true);
     } catch {}
   }, []);
 
-  // Save form data to localStorage whenever it changes
+  // Save form data
   useEffect(() => {
     try {
       localStorage.setItem("resumeforge_form", JSON.stringify(form));
@@ -89,8 +103,69 @@ export default function App() {
     } catch {}
   };
 
-  const generate = async () => {
-    if(!form.fullName||!form.country||!form.jobTitle){setError("Please fill Name, Target Country, and Job Title.");return;}
+  const handleGenerateClick = () => {
+    if(!form.fullName||!form.country||!form.jobTitle){
+      setError("Please fill Name, Target Country, and Job Title.");
+      return;
+    }
+    if(limitReached){
+      setShowEmailPopup(true);
+      return;
+    }
+    if(!trackingEmail){
+      setShowEmailPopup(true);
+      return;
+    }
+    generate(trackingEmail);
+  };
+
+  const handleEmailSubmit = async () => {
+    if(!trackingEmail||!trackingEmail.includes('@')){
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+    setEmailError("");
+
+    try {
+      const res = await fetch("/api/track", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({email: trackingEmail})
+      });
+      const data = await res.json();
+
+      if(!data.allowed){
+        // Limit reached
+        setLimitReached(true);
+        setResumesRemaining(0);
+        try {
+          localStorage.setItem("resumeforge_email", trackingEmail);
+          localStorage.setItem("resumeforge_remaining", "0");
+          localStorage.setItem("resumeforge_limit", "true");
+        } catch {}
+        setShowEmailPopup(false);
+        return;
+      }
+
+      // Allowed
+      const remaining = data.remaining || 0;
+      setResumesRemaining(remaining);
+      try {
+        localStorage.setItem("resumeforge_email", trackingEmail);
+        localStorage.setItem("resumeforge_remaining", remaining.toString());
+        localStorage.setItem("resumeforge_limit", "false");
+      } catch {}
+      setShowEmailPopup(false);
+      generate(trackingEmail);
+
+    } catch {
+      // If tracking fails, allow generation
+      setShowEmailPopup(false);
+      generate(trackingEmail);
+    }
+  };
+
+  const generate = async (email) => {
     setError("");setLoading(true);setResult(null);
     try {
       const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join("\n");
@@ -100,7 +175,7 @@ IMPORTANT: Use EXACTLY the information provided by the candidate. Do NOT change,
 
 CANDIDATE DETAILS:
 Name: ${form.fullName}
-Email: ${form.email}
+Email: ${email||form.email}
 Phone: ${form.phone}
 City: ${form.city}${form.currentLocation&&form.currentLocation!==form.country?` (Currently in ${form.currentLocation}, Relocating to ${form.country})`:""}
 LinkedIn: ${form.linkedIn||"Not provided"}
@@ -156,7 +231,6 @@ Then ONLY this JSON with real calculated scores:
       if(!resumeText||resumeText.length<50) resumeText = data?.text||"No resume generated. Please try again.";
       const newResult = {resume:resumeText,ats};
       setResult(newResult);
-      // Save result to localStorage
       try { localStorage.setItem("resumeforge_result", JSON.stringify(newResult)); } catch {}
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
@@ -201,6 +275,53 @@ ${atsJobDesc}`;
     <div style={{fontFamily:"system-ui,sans-serif",background:"#0a0a0f",minHeight:"100vh",color:"#f0f0f8",padding:"20px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
 
+        {/* Email Popup */}
+        {showEmailPopup&&(
+          <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.8)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+            <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:20,padding:32,maxWidth:440,width:"100%"}}>
+              {limitReached ? (
+                <>
+                  <div style={{textAlign:"center",marginBottom:24}}>
+                    <div style={{fontSize:48,marginBottom:12}}>🔒</div>
+                    <h2 style={{fontSize:22,fontWeight:800,margin:"0 0 8px",color:"#f0f0f8"}}>Free Limit Reached!</h2>
+                    <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>You've used your 2 free resumes. Upgrade to Pro for unlimited resumes!</p>
+                  </div>
+                  <div style={{background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(155,89,245,0.15))",border:"1px solid rgba(108,99,255,0.3)",borderRadius:12,padding:16,marginBottom:20,textAlign:"center"}}>
+                    <div style={{fontSize:13,color:"#a89fff",marginBottom:4}}>🎯 Pro Monthly</div>
+                    <div style={{fontSize:32,fontWeight:800,color:"#f0f0f8"}}>₹299<span style={{fontSize:14,color:"#7878a0"}}>/month</span></div>
+                    <div style={{fontSize:12,color:"#7878a0",marginTop:4}}>Unlimited resumes + Full ATS analysis</div>
+                  </div>
+                  <a href="/pricing" style={{display:"block",width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:15,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",boxSizing:"border-box"}}>💎 Upgrade to Pro</a>
+                  <button onClick={()=>setShowEmailPopup(false)} style={{width:"100%",background:"transparent",border:"1px solid #2a2a3d",borderRadius:12,color:"#7878a0",fontFamily:"inherit",fontSize:14,padding:"12px",cursor:"pointer",marginTop:10}}>Maybe Later</button>
+                </>
+              ) : (
+                <>
+                  <div style={{textAlign:"center",marginBottom:24}}>
+                    <div style={{fontSize:48,marginBottom:12}}>📧</div>
+                    <h2 style={{fontSize:22,fontWeight:800,margin:"0 0 8px",color:"#f0f0f8"}}>Almost Ready!</h2>
+                    <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>Enter your email to generate your free resume. You get <strong style={{color:"#43e97b"}}>2 free resumes</strong> — no credit card needed!</p>
+                  </div>
+                  <div style={{marginBottom:16}}>
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={trackingEmail}
+                      onChange={e=>setTrackingEmail(e.target.value)}
+                      onKeyDown={e=>e.key==="Enter"&&handleEmailSubmit()}
+                      style={{width:"100%",background:"#1c1c28",border:`1px solid ${emailError?"#ff6584":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:15,padding:"12px 16px",outline:"none",boxSizing:"border-box"}}
+                    />
+                    {emailError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {emailError}</div>}
+                  </div>
+                  <button onClick={handleEmailSubmit} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:15,fontWeight:700,padding:"14px",cursor:"pointer",marginBottom:10}}>
+                    ✦ Generate My Free Resume
+                  </button>
+                  <div style={{fontSize:11,color:"#4a4a6a",textAlign:"center"}}>🔒 We respect your privacy. No spam ever.</div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Upgrade Button */}
         <div style={{textAlign:"right",marginBottom:8}}>
           <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",padding:"8px 20px",borderRadius:100,fontSize:13,fontWeight:700,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 15px rgba(108,99,255,0.3)"}}>💎 Upgrade to Pro</a>
@@ -210,7 +331,13 @@ ${atsJobDesc}`;
         <div style={{textAlign:"center",padding:"40px 0 32px"}}>
           <div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",color:"#a89fff",fontSize:12,padding:"4px 14px",borderRadius:100,marginBottom:16}}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
           <h1 style={{fontSize:"clamp(28px,6vw,52px)",fontWeight:800,background:"linear-gradient(135deg,#fff 30%,#a89fff 70%,#ff6584 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"0 0 12px"}}>ResumeForge AI</h1>
-          <p style={{color:"#7878a0",fontSize:16,margin:0}}>Build country-specific, ATS-optimized resumes for any job, anywhere.</p>
+          <p style={{color:"#7878a0",fontSize:16,margin:"0 0 12px"}}>Build country-specific, ATS-optimized resumes for any job, anywhere.</p>
+          {trackingEmail&&!limitReached&&<div style={{display:"inline-block",background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#43e97b"}}>
+            ✅ {resumesRemaining} free resume{resumesRemaining!==1?"s":""} remaining
+          </div>}
+          {limitReached&&<div style={{display:"inline-block",background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#ff6584"}}>
+            🔒 Free limit reached — <a href="/pricing" style={{color:"#6c63ff",textDecoration:"none",fontWeight:700}}>Upgrade to Pro</a>
+          </div>}
         </div>
 
         {/* Tabs */}
@@ -281,7 +408,7 @@ ${atsJobDesc}`;
             <div style={{marginBottom:14}}>
               <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a",fontSize:10,textTransform:"none"}}>(optional — AI will write one if blank)</span></label>
               <div style={{background:"rgba(108,99,255,0.05)",border:"1px solid rgba(108,99,255,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:8,lineHeight:1.6}}>
-                💡 <strong style={{color:"#a89fff"}}>Tip:</strong> Write your own summary for best results. Include your years of experience, key strengths and career goals. The AI will only polish your language, not change your story.
+                💡 <strong style={{color:"#a89fff"}}>Tip:</strong> Write your own summary for best results. The AI will only polish your language, not change your story.
               </div>
               <textarea placeholder="" value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/>
             </div>
@@ -308,7 +435,7 @@ ${atsJobDesc}`;
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>Work Experience</div>
             <div style={{background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:16,lineHeight:1.6}}>
-              💡 <strong style={{color:"#43e97b"}}>Important:</strong> Fill in YOUR actual experience, roles and achievements. The AI will only polish the language — it will NOT change or invent details. The more specific you are, the better and more personal your resume will be!
+              💡 <strong style={{color:"#43e97b"}}>Important:</strong> Fill in YOUR actual experience, roles and achievements. The AI will only polish the language — it will NOT change or invent details!
             </div>
             {experiences.map((exp,i)=>(
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
@@ -341,8 +468,8 @@ ${atsJobDesc}`;
             <button onClick={()=>setEducation(ed=>[...ed,{institution:"",degree:"",year:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Education</button>
           </div>
 
-          <button onClick={generate} disabled={loading} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:loading?"not-allowed":"pointer",opacity:loading?0.6:1,marginBottom:8,boxShadow:"0 8px 32px rgba(108,99,255,0.35)"}}>
-            {loading?"⚙ Generating your resume...":"✦ Generate My ATS-Optimized Resume"}
+          <button onClick={handleGenerateClick} disabled={loading} style={{width:"100%",background:limitReached?"rgba(255,101,132,0.2)":"linear-gradient(135deg,#6c63ff,#9b59f5)",border:limitReached?"1px solid rgba(255,101,132,0.3)":"none",borderRadius:12,color:limitReached?"#ff6584":"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:loading?"not-allowed":"pointer",opacity:loading?0.6:1,marginBottom:8,boxShadow:limitReached?"none":"0 8px 32px rgba(108,99,255,0.35)"}}>
+            {loading?"⚙ Generating your resume...":limitReached?"🔒 Free Limit Reached — Upgrade to Pro":"✦ Generate My ATS-Optimized Resume"}
           </button>
 
           {loading&&<div style={{textAlign:"center",padding:40}}>
@@ -455,7 +582,6 @@ ${atsJobDesc}`;
               </div>
             </div>}
 
-            {/* Upsell in ATS tab */}
             <div style={{background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(155,89,245,0.15))",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:20,marginTop:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:"#f0f0f8",marginBottom:4}}>💎 Want to build an ATS-optimized resume?</div>
