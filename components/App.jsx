@@ -42,12 +42,20 @@ export default function App() {
   const [experiences, setExperiences] = useState([{company:"",role:"",duration:"",description:""}]);
   const [education, setEducation] = useState([{institution:"",degree:"",year:""}]);
 
-  // Email tracking states
+  // Email & coupon tracking states
   const [showEmailPopup, setShowEmailPopup] = useState(false);
   const [trackingEmail, setTrackingEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [resumesRemaining, setResumesRemaining] = useState(FREE_LIMIT);
   const [limitReached, setLimitReached] = useState(false);
+  const [isUnlimited, setIsUnlimited] = useState(false);
+
+  // Coupon states
+  const [showCouponField, setShowCouponField] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponSuccess, setCouponSuccess] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   // Load saved data
   useEffect(() => {
@@ -60,6 +68,7 @@ export default function App() {
       const savedEmail = localStorage.getItem("resumeforge_email");
       const savedRemaining = localStorage.getItem("resumeforge_remaining");
       const savedLimit = localStorage.getItem("resumeforge_limit");
+      const savedUnlimited = localStorage.getItem("resumeforge_unlimited");
       if(saved) setResult(JSON.parse(saved));
       if(savedForm) setForm(JSON.parse(savedForm));
       if(savedSkills) setSkills(JSON.parse(savedSkills));
@@ -68,10 +77,10 @@ export default function App() {
       if(savedEmail) setTrackingEmail(savedEmail);
       if(savedRemaining) setResumesRemaining(parseInt(savedRemaining));
       if(savedLimit === "true") setLimitReached(true);
+      if(savedUnlimited === "true") setIsUnlimited(true);
     } catch {}
   }, []);
 
-  // Save form data
   useEffect(() => {
     try {
       localStorage.setItem("resumeforge_form", JSON.stringify(form));
@@ -108,6 +117,10 @@ export default function App() {
       setError("Please fill Name, Target Country, and Job Title.");
       return;
     }
+    if(isUnlimited){
+      generate(trackingEmail);
+      return;
+    }
     if(limitReached){
       setShowEmailPopup(true);
       return;
@@ -134,8 +147,7 @@ export default function App() {
       });
       const data = await res.json();
 
-      if(!data.allowed){
-        // Limit reached
+      if(!data.allowed && !data.couponApplied){
         setLimitReached(true);
         setResumesRemaining(0);
         try {
@@ -143,11 +155,9 @@ export default function App() {
           localStorage.setItem("resumeforge_remaining", "0");
           localStorage.setItem("resumeforge_limit", "true");
         } catch {}
-        setShowEmailPopup(false);
         return;
       }
 
-      // Allowed
       const remaining = data.remaining || 0;
       setResumesRemaining(remaining);
       try {
@@ -159,14 +169,109 @@ export default function App() {
       generate(trackingEmail);
 
     } catch {
-      // If tracking fails, allow generation
       setShowEmailPopup(false);
       generate(trackingEmail);
     }
   };
 
+  const handleCouponApply = async () => {
+    if(!couponCode.trim()){
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+    if(!trackingEmail||!trackingEmail.includes('@')){
+      setCouponError("Please enter your email first");
+      return;
+    }
+    setCouponError("");
+    setCouponSuccess("");
+    setApplyingCoupon(true);
+
+    try {
+      const res = await fetch("/api/track", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({email: trackingEmail, couponCode: couponCode.trim()})
+      });
+      const data = await res.json();
+
+      if(data.couponError){
+        setCouponError(data.couponError);
+        setApplyingCoupon(false);
+        return;
+      }
+
+      if(data.couponApplied){
+        if(data.couponType === "unlimited"){
+          setIsUnlimited(true);
+          setLimitReached(false);
+          setResumesRemaining(999);
+          setCouponSuccess("🎉 Unlimited access granted!");
+          try {
+            localStorage.setItem("resumeforge_unlimited", "true");
+            localStorage.setItem("resumeforge_limit", "false");
+            localStorage.setItem("resumeforge_email", trackingEmail);
+          } catch {}
+          setTimeout(() => {
+            setShowEmailPopup(false);
+            generate(trackingEmail);
+          }, 1500);
+        }
+
+        if(data.couponType === "free_resumes"){
+          setResumesRemaining(data.remaining);
+          setLimitReached(false);
+          setCouponSuccess(`🎉 ${data.message}`);
+          try {
+            localStorage.setItem("resumeforge_remaining", data.remaining.toString());
+            localStorage.setItem("resumeforge_limit", "false");
+            localStorage.setItem("resumeforge_email", trackingEmail);
+          } catch {}
+          setTimeout(() => {
+            setShowEmailPopup(false);
+            generate(trackingEmail);
+          }, 1500);
+        }
+
+        if(data.couponType === "discount"){
+          setCouponSuccess(`🎉 ${data.discountPercent}% discount applied! Redirecting to pricing...`);
+          setTimeout(() => {
+            window.location.href = `/pricing?discount=${data.discountPercent}&coupon=${couponCode}`;
+          }, 1500);
+        }
+      }
+    } catch {
+      setCouponError("Something went wrong. Please try again.");
+    }
+    setApplyingCoupon(false);
+  };
+
   const generate = async (email) => {
     setError("");setLoading(true);setResult(null);
+    setShowEmailPopup(false);
+
+    // Increment count if not unlimited
+    if(!isUnlimited && email && resumesRemaining > 0){
+      try {
+        const res = await fetch("/api/track", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({email})
+        });
+        const data = await res.json();
+        if(data.remaining !== undefined){
+          setResumesRemaining(data.remaining);
+          try { localStorage.setItem("resumeforge_remaining", data.remaining.toString()); } catch {}
+        }
+        if(!data.allowed && !isUnlimited){
+          setLimitReached(true);
+          setLoading(false);
+          setShowEmailPopup(true);
+          return;
+        }
+      } catch {}
+    }
+
     try {
       const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join("\n");
       const prompt = `Write a polished professional resume for ${form.country} job market. Follow exact resume conventions for ${form.country}.
@@ -201,15 +306,15 @@ STRICT FORMATTING RULES:
 4. Use plain hyphen (-) for bullet points
 5. Do NOT mention work rights or sponsorship in Professional Summary
 6. Only mention work rights in a separate section at the bottom
-7. Phone number in resume should use the exact number provided: ${form.phone}
+7. Phone number in resume should use exact number: ${form.phone}
 8. Use realistic date format: Month Year – Month Year
 9. Separate sections with one blank line only
-10. NEVER invent or add experience/skills/achievements not provided by the candidate
+10. NEVER invent or add experience/skills/achievements not provided
 
 After the complete resume write exactly:
 ---ATS_DATA---
-Then ONLY this JSON with real calculated scores:
-{"score":85,"keyword":80,"formatting":90,"readability":87,"skills":82,"rating":"Good","tips":["Specific tip 1","Specific tip 2","Specific tip 3","Specific tip 4"],"missing":["Missing item 1","Missing item 2","Missing item 3"]}`;
+Then ONLY this JSON:
+{"score":85,"keyword":80,"formatting":90,"readability":87,"skills":82,"rating":"Good","tips":["tip1","tip2","tip3","tip4"],"missing":["item1","item2","item3"]}`;
 
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
@@ -275,43 +380,99 @@ ${atsJobDesc}`;
     <div style={{fontFamily:"system-ui,sans-serif",background:"#0a0a0f",minHeight:"100vh",color:"#f0f0f8",padding:"20px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
 
-        {/* Email Popup */}
+        {/* Email + Coupon Popup */}
         {showEmailPopup&&(
-          <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.8)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-            <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:20,padding:32,maxWidth:440,width:"100%"}}>
-              {limitReached ? (
+          <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+            <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:20,padding:32,maxWidth:460,width:"100%"}}>
+              {limitReached && !couponSuccess ? (
                 <>
                   <div style={{textAlign:"center",marginBottom:24}}>
                     <div style={{fontSize:48,marginBottom:12}}>🔒</div>
                     <h2 style={{fontSize:22,fontWeight:800,margin:"0 0 8px",color:"#f0f0f8"}}>Free Limit Reached!</h2>
-                    <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>You've used your 2 free resumes. Upgrade to Pro for unlimited resumes!</p>
+                    <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>You've used your {FREE_LIMIT} free resumes. Upgrade to Pro or enter a coupon code!</p>
                   </div>
-                  <div style={{background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(155,89,245,0.15))",border:"1px solid rgba(108,99,255,0.3)",borderRadius:12,padding:16,marginBottom:20,textAlign:"center"}}>
-                    <div style={{fontSize:13,color:"#a89fff",marginBottom:4}}>🎯 Pro Monthly</div>
-                    <div style={{fontSize:32,fontWeight:800,color:"#f0f0f8"}}>₹299<span style={{fontSize:14,color:"#7878a0"}}>/month</span></div>
-                    <div style={{fontSize:12,color:"#7878a0",marginTop:4}}>Unlimited resumes + Full ATS analysis</div>
+
+                  {/* Pricing options */}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                    <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>
+                      💎 ₹299/month
+                    </a>
+                    <a href="/pricing" style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.3)",borderRadius:12,color:"#43e97b",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>
+                      ♾️ ₹2999 Lifetime
+                    </a>
                   </div>
-                  <a href="/pricing" style={{display:"block",width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:15,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",boxSizing:"border-box"}}>💎 Upgrade to Pro</a>
-                  <button onClick={()=>setShowEmailPopup(false)} style={{width:"100%",background:"transparent",border:"1px solid #2a2a3d",borderRadius:12,color:"#7878a0",fontFamily:"inherit",fontSize:14,padding:"12px",cursor:"pointer",marginTop:10}}>Maybe Later</button>
+
+                  {/* Divider */}
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+                    <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
+                    <span style={{fontSize:12,color:"#4a4a6a"}}>or use a coupon code</span>
+                    <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
+                  </div>
+
+                  {/* Coupon section */}
+                  <div style={{marginBottom:8}}>
+                    <div style={{display:"flex",gap:8}}>
+                      <input
+                        placeholder="Enter coupon code"
+                        value={couponCode}
+                        onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponError("");setCouponSuccess("");}}
+                        onKeyDown={e=>e.key==="Enter"&&handleCouponApply()}
+                        style={{flex:1,background:"#1c1c28",border:`1px solid ${couponError?"#ff6584":couponSuccess?"#43e97b":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"11px 14px",outline:"none"}}
+                      />
+                      <button onClick={handleCouponApply} disabled={applyingCoupon} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:10,padding:"0 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}}>
+                        {applyingCoupon?"...":"Apply"}
+                      </button>
+                    </div>
+                    {couponError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {couponError}</div>}
+                    {couponSuccess&&<div style={{fontSize:12,color:"#43e97b",marginTop:6}}>{couponSuccess}</div>}
+                  </div>
+
+                  <button onClick={()=>setShowEmailPopup(false)} style={{width:"100%",background:"transparent",border:"1px solid #2a2a3d",borderRadius:12,color:"#7878a0",fontFamily:"inherit",fontSize:13,padding:"11px",cursor:"pointer",marginTop:8}}>Maybe Later</button>
                 </>
               ) : (
                 <>
                   <div style={{textAlign:"center",marginBottom:24}}>
                     <div style={{fontSize:48,marginBottom:12}}>📧</div>
                     <h2 style={{fontSize:22,fontWeight:800,margin:"0 0 8px",color:"#f0f0f8"}}>Almost Ready!</h2>
-                    <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>Enter your email to generate your free resume. You get <strong style={{color:"#43e97b"}}>2 free resumes</strong> — no credit card needed!</p>
+                    <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>Enter your email to get <strong style={{color:"#43e97b"}}>{FREE_LIMIT} free resumes</strong> — no credit card needed!</p>
                   </div>
-                  <div style={{marginBottom:16}}>
+
+                  {/* Email input */}
+                  <div style={{marginBottom:12}}>
                     <input
                       type="email"
                       placeholder="your@email.com"
                       value={trackingEmail}
-                      onChange={e=>setTrackingEmail(e.target.value)}
+                      onChange={e=>{setTrackingEmail(e.target.value);setEmailError("");}}
                       onKeyDown={e=>e.key==="Enter"&&handleEmailSubmit()}
                       style={{width:"100%",background:"#1c1c28",border:`1px solid ${emailError?"#ff6584":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:15,padding:"12px 16px",outline:"none",boxSizing:"border-box"}}
                     />
                     {emailError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {emailError}</div>}
                   </div>
+
+                  {/* Coupon toggle */}
+                  {!showCouponField ? (
+                    <button onClick={()=>setShowCouponField(true)} style={{background:"none",border:"none",color:"#6c63ff",cursor:"pointer",fontSize:12,padding:"0 0 12px",fontFamily:"inherit",textDecoration:"underline"}}>
+                      🎟️ Have a coupon code?
+                    </button>
+                  ) : (
+                    <div style={{marginBottom:12}}>
+                      <div style={{display:"flex",gap:8}}>
+                        <input
+                          placeholder="Enter coupon code"
+                          value={couponCode}
+                          onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponError("");setCouponSuccess("");}}
+                          style={{flex:1,background:"#1c1c28",border:`1px solid ${couponError?"#ff6584":couponSuccess?"#43e97b":"rgba(108,99,255,0.3)"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"11px 14px",outline:"none"}}
+                        />
+                        <button onClick={handleCouponApply} disabled={applyingCoupon} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:10,padding:"0 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700}}>
+                          {applyingCoupon?"...":"Apply"}
+                        </button>
+                      </div>
+                      {couponError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {couponError}</div>}
+                      {couponSuccess&&<div style={{fontSize:12,color:"#43e97b",marginTop:6}}>{couponSuccess}</div>}
+                    </div>
+                  )}
+
                   <button onClick={handleEmailSubmit} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:15,fontWeight:700,padding:"14px",cursor:"pointer",marginBottom:10}}>
                     ✦ Generate My Free Resume
                   </button>
@@ -332,10 +493,13 @@ ${atsJobDesc}`;
           <div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",color:"#a89fff",fontSize:12,padding:"4px 14px",borderRadius:100,marginBottom:16}}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
           <h1 style={{fontSize:"clamp(28px,6vw,52px)",fontWeight:800,background:"linear-gradient(135deg,#fff 30%,#a89fff 70%,#ff6584 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"0 0 12px"}}>ResumeForge AI</h1>
           <p style={{color:"#7878a0",fontSize:16,margin:"0 0 12px"}}>Build country-specific, ATS-optimized resumes for any job, anywhere.</p>
-          {trackingEmail&&!limitReached&&<div style={{display:"inline-block",background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#43e97b"}}>
+          {isUnlimited&&<div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#a89fff"}}>
+            ♾️ Unlimited Access Active
+          </div>}
+          {!isUnlimited&&trackingEmail&&!limitReached&&<div style={{display:"inline-block",background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#43e97b"}}>
             ✅ {resumesRemaining} free resume{resumesRemaining!==1?"s":""} remaining
           </div>}
-          {limitReached&&<div style={{display:"inline-block",background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#ff6584"}}>
+          {limitReached&&!isUnlimited&&<div style={{display:"inline-block",background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#ff6584"}}>
             🔒 Free limit reached — <a href="/pricing" style={{color:"#6c63ff",textDecoration:"none",fontWeight:700}}>Upgrade to Pro</a>
           </div>}
         </div>
@@ -435,7 +599,7 @@ ${atsJobDesc}`;
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>Work Experience</div>
             <div style={{background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:16,lineHeight:1.6}}>
-              💡 <strong style={{color:"#43e97b"}}>Important:</strong> Fill in YOUR actual experience, roles and achievements. The AI will only polish the language — it will NOT change or invent details!
+              💡 <strong style={{color:"#43e97b"}}>Important:</strong> Fill in YOUR actual experience, roles and achievements. The AI will only polish the language!
             </div>
             {experiences.map((exp,i)=>(
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
@@ -468,8 +632,8 @@ ${atsJobDesc}`;
             <button onClick={()=>setEducation(ed=>[...ed,{institution:"",degree:"",year:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Education</button>
           </div>
 
-          <button onClick={handleGenerateClick} disabled={loading} style={{width:"100%",background:limitReached?"rgba(255,101,132,0.2)":"linear-gradient(135deg,#6c63ff,#9b59f5)",border:limitReached?"1px solid rgba(255,101,132,0.3)":"none",borderRadius:12,color:limitReached?"#ff6584":"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:loading?"not-allowed":"pointer",opacity:loading?0.6:1,marginBottom:8,boxShadow:limitReached?"none":"0 8px 32px rgba(108,99,255,0.35)"}}>
-            {loading?"⚙ Generating your resume...":limitReached?"🔒 Free Limit Reached — Upgrade to Pro":"✦ Generate My ATS-Optimized Resume"}
+          <button onClick={handleGenerateClick} disabled={loading} style={{width:"100%",background:limitReached&&!isUnlimited?"rgba(255,101,132,0.2)":"linear-gradient(135deg,#6c63ff,#9b59f5)",border:limitReached&&!isUnlimited?"1px solid rgba(255,101,132,0.3)":"none",borderRadius:12,color:limitReached&&!isUnlimited?"#ff6584":"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:loading?"not-allowed":"pointer",opacity:loading?0.6:1,marginBottom:8,boxShadow:limitReached&&!isUnlimited?"none":"0 8px 32px rgba(108,99,255,0.35)"}}>
+            {loading?"⚙ Generating your resume...":limitReached&&!isUnlimited?"🔒 Free Limit Reached — Upgrade or Use Coupon":"✦ Generate My ATS-Optimized Resume"}
           </button>
 
           {loading&&<div style={{textAlign:"center",padding:40}}>
@@ -528,7 +692,6 @@ ${atsJobDesc}`;
               <div style={{marginTop:12,fontSize:12,color:"#4a4a6a"}}>💡 Copy this resume and paste into Microsoft Word or Google Docs for final formatting.</div>
             </div>
 
-            {/* Upsell Banner */}
             <div style={{background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(155,89,245,0.15))",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:20,marginTop:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:"#f0f0f8",marginBottom:4}}>💎 Want unlimited resumes + full ATS analysis?</div>
