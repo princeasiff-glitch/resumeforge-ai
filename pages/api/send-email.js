@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'ResumeForge AI <onboarding@resend.dev>',
+      from: 'ResumeForge AI <noreply@resumeforgeai.live>',
       to: [email],
       subject: `Your ${country} Resume from ResumeForge AI 🎯`,
       html: `
