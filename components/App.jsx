@@ -32,6 +32,8 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsResult, setAtsResult] = useState(null);
   const [atsResumeText, setAtsResumeText] = useState("");
@@ -250,7 +252,6 @@ export default function App() {
     setError("");setLoading(true);setResult(null);
     setShowEmailPopup(false);
 
-    // Increment count if not unlimited
     if(!isUnlimited && email && resumesRemaining > 0){
       try {
         const res = await fetch("/api/track", {
@@ -374,6 +375,38 @@ ${atsJobDesc}`;
     setAtsLoading(false);
   };
 
+  const sendResumeEmail = async () => {
+    const emailToUse = trackingEmail || form.email;
+    if(!emailToUse || !emailToUse.includes('@')){
+      alert("No email found. Please enter your email first.");
+      return;
+    }
+    setEmailSending(true);
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          email: emailToUse,
+          name: form.fullName,
+          resumeText: result.resume,
+          atsScore: result.ats.score,
+          country: form.country
+        })
+      });
+      const data = await res.json();
+      if(data.success){
+        setEmailSent(true);
+        setTimeout(()=>setEmailSent(false), 4000);
+      } else {
+        alert("Failed to send email. Please try copying the resume instead.");
+      }
+    } catch {
+      alert("Failed to send email. Please try copying the resume instead.");
+    }
+    setEmailSending(false);
+  };
+
   const sc = (s) => s>=80?"#43e97b":s>=60?"#ffd700":"#ff6584";
 
   return (
@@ -392,7 +425,6 @@ ${atsJobDesc}`;
                     <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>You've used your {FREE_LIMIT} free resumes. Upgrade to Pro or enter a coupon code!</p>
                   </div>
 
-                  {/* Pricing options */}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
                     <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>
                       💎 ₹299/month
@@ -402,14 +434,12 @@ ${atsJobDesc}`;
                     </a>
                   </div>
 
-                  {/* Divider */}
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
                     <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
                     <span style={{fontSize:12,color:"#4a4a6a"}}>or use a coupon code</span>
                     <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
                   </div>
 
-                  {/* Coupon section */}
                   <div style={{marginBottom:8}}>
                     <div style={{display:"flex",gap:8}}>
                       <input
@@ -437,7 +467,6 @@ ${atsJobDesc}`;
                     <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>Enter your email to get <strong style={{color:"#43e97b"}}>{FREE_LIMIT} free resumes</strong> — no credit card needed!</p>
                   </div>
 
-                  {/* Email input */}
                   <div style={{marginBottom:12}}>
                     <input
                       type="email"
@@ -450,7 +479,6 @@ ${atsJobDesc}`;
                     {emailError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {emailError}</div>}
                   </div>
 
-                  {/* Coupon toggle */}
                   {!showCouponField ? (
                     <button onClick={()=>setShowCouponField(true)} style={{background:"none",border:"none",color:"#6c63ff",cursor:"pointer",fontSize:12,padding:"0 0 12px",fontFamily:"inherit",textDecoration:"underline"}}>
                       🎟️ Have a coupon code?
@@ -683,8 +711,9 @@ ${atsJobDesc}`;
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
                 <h2 style={{margin:0,fontSize:18,fontWeight:700}}>📄 Your Resume — {form.country}</h2>
-                <div style={{display:"flex",gap:8}}>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <button onClick={()=>{navigator.clipboard.writeText(result.resume);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>{copied?"✓ Copied!":"⎘ Copy Resume"}</button>
+                  <button onClick={sendResumeEmail} disabled={emailSending} style={{background:"rgba(108,99,255,0.1)",border:"1px solid rgba(108,99,255,0.25)",color:"#a89fff",borderRadius:8,padding:"8px 16px",cursor:emailSending?"not-allowed":"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500,opacity:emailSending?0.6:1}}>{emailSending?"📧 Sending...":emailSent?"✓ Sent to your email!":"📧 Email Me This Resume"}</button>
                   <button onClick={clearAll} style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>🗑 Start New</button>
                 </div>
               </div>
