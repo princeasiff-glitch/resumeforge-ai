@@ -52,12 +52,15 @@ export default async function handler(req, res) {
     });
 
     if (error) {
-      return res.status(500).json({ error: error.message });
+      console.log('Resend error:', JSON.stringify(error));
+      return res.status(500).json({ error: error.message || JSON.stringify(error) });
     }
 
+    console.log('Email sent successfully:', data.id);
     return res.status(200).json({ success: true, id: data.id });
 
   } catch (error) {
+    console.log('Catch error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 }
