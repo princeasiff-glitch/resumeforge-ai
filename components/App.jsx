@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react"; import ResumePdfDocument from "../lib/ResumePdfDocument"; import { getTemplateForCountry } from "../lib/templateConfig";
+import { useState, useEffect } from "react";
+import ResumePdfDocument from "../lib/ResumePdfDocument";
+import { getTemplateForCountry } from "../lib/templateConfig";
 
 const COUNTRIES = ["United States","United Kingdom","India","Canada","Australia","Germany","France","UAE","Singapore","South Africa","Nigeria","Brazil","Japan","South Korea","Netherlands","Sweden","New Zealand","Malaysia","Philippines","Kenya","Pakistan","Bangladesh","Sri Lanka","Ireland","Italy","Spain","Portugal","Poland","Mexico","Argentina"];
 
@@ -44,7 +46,6 @@ export default function App() {
   const [experiences, setExperiences] = useState([{company:"",role:"",duration:"",description:""}]);
   const [education, setEducation] = useState([{institution:"",degree:"",year:""}]);
 
-  // Email & coupon tracking states
   const [showEmailPopup, setShowEmailPopup] = useState(false);
   const [trackingEmail, setTrackingEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -52,14 +53,12 @@ export default function App() {
   const [limitReached, setLimitReached] = useState(false);
   const [isUnlimited, setIsUnlimited] = useState(false);
 
-  // Coupon states
   const [showCouponField, setShowCouponField] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
-  // Load saved data
   useEffect(() => {
     try {
       const saved = localStorage.getItem("resumeforge_result");
@@ -375,6 +374,39 @@ ${atsJobDesc}`;
     setAtsLoading(false);
   };
 
+  const downloadResumePdf = async () => {
+    try {
+      const { pdf } = await import("@react-pdf/renderer");
+      const templateStyle = getTemplateForCountry(form.country);
+      const candidate = {
+        fullName: form.fullName,
+        email: form.email || trackingEmail,
+        phone: form.phone,
+        city: form.city,
+        linkedIn: form.linkedIn,
+        jobTitle: form.jobTitle,
+      };
+      const doc = (
+        <ResumePdfDocument
+          resumeText={result.resume}
+          candidate={candidate}
+          templateStyle={templateStyle}
+        />
+      );
+      const blob = await pdf(doc).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(form.fullName || "Resume").replace(/\s+/g, "_")}_Resume.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Failed to generate PDF. Please try copying the resume instead.");
+    }
+  };
+
   const sendResumeEmail = async () => {
     const emailToUse = trackingEmail || form.email;
     if(!emailToUse || !emailToUse.includes('@')){
@@ -413,7 +445,6 @@ ${atsJobDesc}`;
     <div style={{fontFamily:"system-ui,sans-serif",background:"#0a0a0f",minHeight:"100vh",color:"#f0f0f8",padding:"20px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
 
-        {/* Email + Coupon Popup */}
         {showEmailPopup&&(
           <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:20,padding:32,maxWidth:460,width:"100%"}}>
@@ -511,12 +542,10 @@ ${atsJobDesc}`;
           </div>
         )}
 
-        {/* Upgrade Button */}
         <div style={{textAlign:"right",marginBottom:8}}>
           <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",padding:"8px 20px",borderRadius:100,fontSize:13,fontWeight:700,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 15px rgba(108,99,255,0.3)"}}>💎 Upgrade to Pro</a>
         </div>
 
-        {/* Header */}
         <div style={{textAlign:"center",padding:"40px 0 32px"}}>
           <div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",color:"#a89fff",fontSize:12,padding:"4px 14px",borderRadius:100,marginBottom:16}}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
           <h1 style={{fontSize:"clamp(28px,6vw,52px)",fontWeight:800,background:"linear-gradient(135deg,#fff 30%,#a89fff 70%,#ff6584 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"0 0 12px"}}>ResumeForge AI</h1>
@@ -532,7 +561,6 @@ ${atsJobDesc}`;
           </div>}
         </div>
 
-        {/* Tabs */}
         <div style={{display:"flex",gap:6,background:"#13131a",border:"1px solid #2a2a3d",borderRadius:12,padding:5,maxWidth:380,margin:"0 auto 32px"}}>
           {["builder","ats"].map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"10px 16px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:500,background:tab===t?"#6c63ff":"transparent",color:tab===t?"#fff":"#7878a0"}}>
@@ -544,7 +572,6 @@ ${atsJobDesc}`;
         {tab==="builder"&&<>
           {error&&<div style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:10,padding:"12px 16px",marginBottom:16}}>⚠ {error}</div>}
 
-          {/* Personal Info */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff"}}>Personal Information</div>
@@ -582,7 +609,6 @@ ${atsJobDesc}`;
             </div>}
           </div>
 
-          {/* Country Specific Fields */}
           {extraFields.length>0&&<div style={{background:"#13131a",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:6}}>🌍 {form.country}-Specific Fields</div>
             <div style={{fontSize:12,color:"#7878a0",marginBottom:16}}>These fields are required for {form.country} job applications and boost your ATS score.</div>
@@ -593,7 +619,6 @@ ${atsJobDesc}`;
             </div>
           </div>}
 
-          {/* Target Role */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Target Role</div>
             <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
@@ -610,7 +635,6 @@ ${atsJobDesc}`;
             </div>
           </div>
 
-          {/* Skills */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Skills</div>
             <div style={{display:"flex",gap:10}}>
@@ -623,7 +647,6 @@ ${atsJobDesc}`;
             {skills.length===0&&<div style={{marginTop:8,fontSize:11,color:"#4a4a6a"}}>💡 Add at least 5-8 skills to improve your ATS score</div>}
           </div>
 
-          {/* Experience */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>Work Experience</div>
             <div style={{background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:16,lineHeight:1.6}}>
@@ -644,7 +667,6 @@ ${atsJobDesc}`;
             <button onClick={()=>setExperiences(ex=>[...ex,{company:"",role:"",duration:"",description:""}])} style={{width:"100%",background:"transparent",border:"1px dashed #2a2a3d",color:"#7878a0",borderRadius:10,padding:11,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>+ Add Another Experience</button>
           </div>
 
-          {/* Education */}
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:20}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:18}}>Education</div>
             {education.map((edu,i)=>(
@@ -713,6 +735,7 @@ ${atsJobDesc}`;
                 <h2 style={{margin:0,fontSize:18,fontWeight:700}}>📄 Your Resume — {form.country}</h2>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <button onClick={()=>{navigator.clipboard.writeText(result.resume);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>{copied?"✓ Copied!":"⎘ Copy Resume"}</button>
+                  <button onClick={downloadResumePdf} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>⬇ Download Styled PDF</button>
                   <button onClick={sendResumeEmail} disabled={emailSending} style={{background:"rgba(108,99,255,0.1)",border:"1px solid rgba(108,99,255,0.25)",color:"#a89fff",borderRadius:8,padding:"8px 16px",cursor:emailSending?"not-allowed":"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500,opacity:emailSending?0.6:1}}>{emailSending?"📧 Sending...":emailSent?"✓ Sent to your email!":"📧 Email Me This Resume"}</button>
                   <button onClick={clearAll} style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:500}}>🗑 Start New</button>
                 </div>
@@ -731,7 +754,6 @@ ${atsJobDesc}`;
           </div>}
         </>}
 
-        {/* ATS Checker Tab */}
         {tab==="ats"&&<div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24}}>
           <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>ATS Score Checker</div>
           <p style={{color:"#7878a0",fontSize:14,marginBottom:20,lineHeight:1.6}}>Already have a resume? Paste it below along with the job description to instantly check your ATS score!</p>
@@ -784,7 +806,6 @@ ${atsJobDesc}`;
           </div>}
         </div>}
 
-        {/* Footer */}
         <div style={{textAlign:"center",padding:"32px 0 16px",borderTop:"1px solid #2a2a3d",marginTop:32}}>
           <div style={{fontSize:12,color:"#4a4a6a"}}>Need help? Contact us at <a href={`mailto:${SUPPORT_EMAIL}`} style={{color:"#6c63ff",textDecoration:"none"}}>{SUPPORT_EMAIL}</a></div>
         </div>
