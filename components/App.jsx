@@ -361,15 +361,17 @@ ${form.jobDescription || "General professional role in " + form.country}
 
 COVER LETTER RULES:
 1. Follow ${form.country} cover letter conventions exactly
-2. Start with "Dear Hiring Manager,"
+2. Start directly with "Dear Hiring Manager," — no header, no address, no date before it
 3. 3-4 paragraphs maximum — opening, skills/experience, why this company, closing
 4. Professional but warm tone
-5. End with "Sincerely," on its own line
+5. End with "Sincerely," followed by the candidate name ONCE only
 6. Do NOT use asterisks, hashtags or markdown
 7. Keep it to one page
 8. Reference actual details from the resume — do not invent anything
 9. For Gulf/Middle East: more formal tone, mention visa status if provided
-10. For UK: slightly more formal than US style`;
+10. For UK: slightly more formal than US style
+11. Do NOT include date, address, email, phone or name at the top — header is added automatically
+12. Do NOT repeat the candidate name anywhere except after "Sincerely,"`;
 
       const res = await fetch("/api/generate", {
         method: "POST",
