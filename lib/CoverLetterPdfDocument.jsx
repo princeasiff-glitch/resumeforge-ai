@@ -77,7 +77,7 @@ function cleanAndParse(text, candidateName) {
   for (const line of lines) {
     const lower = line.toLowerCase();
     // Skip lines that are duplicate header info the AI shouldn't have added
-    if (/^hiring manager/i.test(line)) continue;
+    if (/hiring manager/i.test(line) && line.length < 30) continue;
     if (/^\[date\]/i.test(line)) continue;
     if (/^\d{1,2}\s+\w+\s+\d{4}$/.test(line)) continue; // bare date line like "19 June 2026"
     // Skip standalone name lines that appear before "Sincerely"
