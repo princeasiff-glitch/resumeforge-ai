@@ -371,7 +371,9 @@ COVER LETTER RULES:
 9. For Gulf/Middle East: more formal tone, mention visa status if provided
 10. For UK: slightly more formal than US style
 11. Do NOT include date, address, email, phone or name at the top — header is added automatically
-12. Do NOT repeat the candidate name anywhere except after "Sincerely,"`;
+12. Do NOT write "Hiring Manager" anywhere — it is added automatically
+13. Do NOT write the candidate name before "Sincerely," — only write it ONCE after "Sincerely,"
+14. The ONLY acceptable ending is exactly: "Sincerely," on one line then "${form.fullName}" on the next line — nothing else after that`;
 
       const res = await fetch("/api/generate", {
         method: "POST",
