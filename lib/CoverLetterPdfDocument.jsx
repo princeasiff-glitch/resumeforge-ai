@@ -70,21 +70,52 @@ function buildStyles(theme) {
   });
 }
 
-function splitIntoParagraphs(text) {
-  return text
-    .split(/\n{2,}/)
-    .map(p => p.replace(/\n/g, " ").trim())
-    .filter(p => p.length > 0);
+function cleanAndParse(text, candidateName) {
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const cleaned = [];
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    // Skip lines that are duplicate header info the AI shouldn't have added
+    if (/^hiring manager/i.test(line)) continue;
+    if (/^\[date\]/i.test(line)) continue;
+    if (/^\d{1,2}\s+\w+\s+\d{4}$/.test(line)) continue; // bare date line like "19 June 2026"
+    // Skip standalone name lines that appear before "Sincerely"
+    if (line === candidateName && cleaned.length > 0 && !cleaned.some(l => /^sincerely/i.test(l))) continue;
+    cleaned.push(line);
+  }
+
+  // Now split into sections
+  const salutationIdx = cleaned.findIndex(l => /^dear/i.test(l));
+  const closingIdx = cleaned.findIndex(l => /^(sincerely|yours|regards|best)/i.test(l));
+
+  const salutation = salutationIdx >= 0 ? cleaned[salutationIdx] : "Dear Hiring Manager,";
+
+  // Body = lines between salutation and closing
+  const bodyLines = cleaned.slice(
+    salutationIdx >= 0 ? salutationIdx + 1 : 0,
+    closingIdx >= 0 ? closingIdx : cleaned.length
+  );
+
+  // Merge body lines into paragraphs (split on empty gaps)
+  const paragraphs = [];
+  let current = [];
+  for (const line of bodyLines) {
+    if (line === "") {
+      if (current.length) { paragraphs.push(current.join(" ")); current = []; }
+    } else {
+      current.push(line);
+    }
+  }
+  if (current.length) paragraphs.push(current.join(" "));
+
+  return { salutation, paragraphs };
 }
 
 export default function CoverLetterPdfDocument({ coverLetterText, candidate, templateStyle }) {
   const theme = TEMPLATE_THEME[templateStyle] || TEMPLATE_THEME[TEMPLATE_STYLES.MODERN_MINIMAL];
   const styles = buildStyles(theme);
-  const paragraphs = splitIntoParagraphs(coverLetterText);
-
-  const salutation = paragraphs.find(p => /^dear/i.test(p)) || "Dear Hiring Manager,";
-  const closing = paragraphs.find(p => /^(yours|sincerely|regards|best)/i.test(p)) || "Sincerely,";
-  const body = paragraphs.filter(p => p !== salutation && p !== closing);
+  const { salutation, paragraphs } = cleanAndParse(coverLetterText, candidate.fullName);
 
   const today = new Date().toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric"
@@ -93,6 +124,7 @@ export default function CoverLetterPdfDocument({ coverLetterText, candidate, tem
   return (
     <Document title={`${candidate.fullName} - Cover Letter`} author="ResumeForge AI">
       <Page size="A4" style={styles.page}>
+        {/* Header — name + contact */}
         <View style={styles.header}>
           <Text style={styles.name}>{candidate.fullName}</Text>
           <Text style={styles.contactLine}>
@@ -103,17 +135,24 @@ export default function CoverLetterPdfDocument({ coverLetterText, candidate, tem
           ) : null}
         </View>
 
+        {/* Date — added by component, not AI */}
         <Text style={styles.date}>{today}</Text>
+
+        {/* Hiring Manager label — added by component, not AI */}
         <Text style={styles.hiringLabel}>Hiring Manager</Text>
         <View style={styles.accentBar} />
+
+        {/* Salutation */}
         <Text style={styles.salutation}>{salutation}</Text>
 
-        {body.map((para, idx) => (
+        {/* Body paragraphs */}
+        {paragraphs.map((para, idx) => (
           <Text key={idx} style={styles.paragraph}>{para}</Text>
         ))}
 
+        {/* Closing — always exactly one name after Sincerely */}
         <View style={styles.closing}>
-          <Text>{closing}</Text>
+          <Text>Sincerely,</Text>
           <Text style={styles.signature}>{candidate.fullName}</Text>
         </View>
       </Page>
