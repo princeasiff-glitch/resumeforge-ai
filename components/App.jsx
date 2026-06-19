@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import ResumePdfDocument from "../lib/ResumePdfDocument";
+import CoverLetterPdfDocument from "../lib/CoverLetterPdfDocument";
 import { getTemplateForCountry } from "../lib/templateConfig";
 
 const COUNTRIES = ["United States","United Kingdom","India","Canada","Australia","Germany","France","UAE","Singapore","South Africa","Nigeria","Brazil","Japan","South Korea","Netherlands","Sweden","New Zealand","Malaysia","Philippines","Kenya","Pakistan","Bangladesh","Sri Lanka","Ireland","Italy","Spain","Portugal","Poland","Mexico","Argentina"];
@@ -59,6 +60,11 @@ export default function App() {
   const [couponSuccess, setCouponSuccess] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
+  // Cover letter states
+  const [coverLetter, setCoverLetter] = useState(null);
+  const [coverLetterLoading, setCoverLetterLoading] = useState(false);
+  const [coverLetterCopied, setCoverLetterCopied] = useState(false);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem("resumeforge_result");
@@ -104,6 +110,7 @@ export default function App() {
     setExperiences([{company:"",role:"",duration:"",description:""}]);
     setEducation([{institution:"",degree:"",year:""}]);
     setResult(null);
+    setCoverLetter(null);
     try {
       localStorage.removeItem("resumeforge_result");
       localStorage.removeItem("resumeforge_form");
@@ -118,18 +125,9 @@ export default function App() {
       setError("Please fill Name, Target Country, and Job Title.");
       return;
     }
-    if(isUnlimited){
-      generate(trackingEmail);
-      return;
-    }
-    if(limitReached){
-      setShowEmailPopup(true);
-      return;
-    }
-    if(!trackingEmail){
-      setShowEmailPopup(true);
-      return;
-    }
+    if(isUnlimited){ generate(trackingEmail); return; }
+    if(limitReached){ setShowEmailPopup(true); return; }
+    if(!trackingEmail){ setShowEmailPopup(true); return; }
     generate(trackingEmail);
   };
 
@@ -139,7 +137,6 @@ export default function App() {
       return;
     }
     setEmailError("");
-
     try {
       const res = await fetch("/api/track", {
         method: "POST",
@@ -147,7 +144,6 @@ export default function App() {
         body: JSON.stringify({email: trackingEmail})
       });
       const data = await res.json();
-
       if(!data.allowed && !data.couponApplied){
         setLimitReached(true);
         setResumesRemaining(0);
@@ -158,7 +154,6 @@ export default function App() {
         } catch {}
         return;
       }
-
       const remaining = data.remaining || 0;
       setResumesRemaining(remaining);
       try {
@@ -168,7 +163,6 @@ export default function App() {
       } catch {}
       setShowEmailPopup(false);
       generate(trackingEmail);
-
     } catch {
       setShowEmailPopup(false);
       generate(trackingEmail);
@@ -176,18 +170,9 @@ export default function App() {
   };
 
   const handleCouponApply = async () => {
-    if(!couponCode.trim()){
-      setCouponError("Please enter a coupon code");
-      return;
-    }
-    if(!trackingEmail||!trackingEmail.includes('@')){
-      setCouponError("Please enter your email first");
-      return;
-    }
-    setCouponError("");
-    setCouponSuccess("");
-    setApplyingCoupon(true);
-
+    if(!couponCode.trim()){ setCouponError("Please enter a coupon code"); return; }
+    if(!trackingEmail||!trackingEmail.includes('@')){ setCouponError("Please enter your email first"); return; }
+    setCouponError(""); setCouponSuccess(""); setApplyingCoupon(true);
     try {
       const res = await fetch("/api/track", {
         method: "POST",
@@ -195,62 +180,40 @@ export default function App() {
         body: JSON.stringify({email: trackingEmail, couponCode: couponCode.trim()})
       });
       const data = await res.json();
-
-      if(data.couponError){
-        setCouponError(data.couponError);
-        setApplyingCoupon(false);
-        return;
-      }
-
+      if(data.couponError){ setCouponError(data.couponError); setApplyingCoupon(false); return; }
       if(data.couponApplied){
         if(data.couponType === "unlimited"){
-          setIsUnlimited(true);
-          setLimitReached(false);
-          setResumesRemaining(999);
+          setIsUnlimited(true); setLimitReached(false); setResumesRemaining(999);
           setCouponSuccess("🎉 Unlimited access granted!");
           try {
             localStorage.setItem("resumeforge_unlimited", "true");
             localStorage.setItem("resumeforge_limit", "false");
             localStorage.setItem("resumeforge_email", trackingEmail);
           } catch {}
-          setTimeout(() => {
-            setShowEmailPopup(false);
-            generate(trackingEmail);
-          }, 1500);
+          setTimeout(() => { setShowEmailPopup(false); generate(trackingEmail); }, 1500);
         }
-
         if(data.couponType === "free_resumes"){
-          setResumesRemaining(data.remaining);
-          setLimitReached(false);
+          setResumesRemaining(data.remaining); setLimitReached(false);
           setCouponSuccess(`🎉 ${data.message}`);
           try {
             localStorage.setItem("resumeforge_remaining", data.remaining.toString());
             localStorage.setItem("resumeforge_limit", "false");
             localStorage.setItem("resumeforge_email", trackingEmail);
           } catch {}
-          setTimeout(() => {
-            setShowEmailPopup(false);
-            generate(trackingEmail);
-          }, 1500);
+          setTimeout(() => { setShowEmailPopup(false); generate(trackingEmail); }, 1500);
         }
-
         if(data.couponType === "discount"){
           setCouponSuccess(`🎉 ${data.discountPercent}% discount applied! Redirecting to pricing...`);
-          setTimeout(() => {
-            window.location.href = `/pricing?discount=${data.discountPercent}&coupon=${couponCode}`;
-          }, 1500);
+          setTimeout(() => { window.location.href = `/pricing?discount=${data.discountPercent}&coupon=${couponCode}`; }, 1500);
         }
       }
-    } catch {
-      setCouponError("Something went wrong. Please try again.");
-    }
+    } catch { setCouponError("Something went wrong. Please try again."); }
     setApplyingCoupon(false);
   };
 
   const generate = async (email) => {
-    setError("");setLoading(true);setResult(null);
+    setError(""); setLoading(true); setResult(null); setCoverLetter(null);
     setShowEmailPopup(false);
-
     if(!isUnlimited && email && resumesRemaining > 0){
       try {
         const res = await fetch("/api/track", {
@@ -264,14 +227,10 @@ export default function App() {
           try { localStorage.setItem("resumeforge_remaining", data.remaining.toString()); } catch {}
         }
         if(!data.allowed && !isUnlimited){
-          setLimitReached(true);
-          setLoading(false);
-          setShowEmailPopup(true);
-          return;
+          setLimitReached(true); setLoading(false); setShowEmailPopup(true); return;
         }
       } catch {}
     }
-
     try {
       const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join("\n");
       const prompt = `Write a polished professional resume for ${form.country} job market. Follow exact resume conventions for ${form.country}.
@@ -318,21 +277,14 @@ Then ONLY this JSON:
 
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-
       let resumeText = data?.text || "";
       let ats = {score:72,keyword:68,formatting:85,readability:78,skills:70,rating:"Good",tips:[],missing:[]};
-
-      if(data.ats){
-        ats = {...ats,...data.ats};
-      } else if(resumeText.includes("---ATS_DATA---")){
+      if(data.ats){ ats = {...ats,...data.ats}; }
+      else if(resumeText.includes("---ATS_DATA---")){
         const parts = resumeText.split("---ATS_DATA---");
         resumeText = parts[0].trim();
-        try{
-          const jsonStr = parts[1].replace(/```json|```/g,"").trim();
-          ats = {...ats,...JSON.parse(jsonStr)};
-        }catch{}
+        try{ const jsonStr = parts[1].replace(/```json|```/g,"").trim(); ats = {...ats,...JSON.parse(jsonStr)}; }catch{}
       }
-
       if(!resumeText||resumeText.length<50) resumeText = data?.text||"No resume generated. Please try again.";
       const newResult = {resume:resumeText,ats};
       setResult(newResult);
@@ -342,7 +294,7 @@ Then ONLY this JSON:
   };
 
   const analyzeATS = async () => {
-    setAtsLoading(true);setAtsResult(null);
+    setAtsLoading(true); setAtsResult(null);
     try {
       const prompt = `You are an ATS expert. Analyze this resume against the job description carefully.
 Return ONLY a JSON object with no other text:
@@ -353,13 +305,10 @@ ${atsResumeText}
 
 JOB DESCRIPTION:
 ${atsJobDesc}`;
-
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-
-      if(data.ats){
-        setAtsResult({overall:data.ats.score||data.ats.overall||70,...data.ats});
-      } else {
+      if(data.ats){ setAtsResult({overall:data.ats.score||data.ats.overall||70,...data.ats}); }
+      else {
         const text = data?.text || "{}";
         try{
           const clean = text.replace(/```json|```/g,"").trim();
@@ -379,63 +328,98 @@ ${atsJobDesc}`;
       const { pdf } = await import("@react-pdf/renderer");
       const templateStyle = getTemplateForCountry(form.country);
       const candidate = {
-        fullName: form.fullName,
-        email: form.email || trackingEmail,
-        phone: form.phone,
-        city: form.city,
-        linkedIn: form.linkedIn,
-        jobTitle: form.jobTitle,
+        fullName: form.fullName, email: form.email || trackingEmail,
+        phone: form.phone, city: form.city, linkedIn: form.linkedIn, jobTitle: form.jobTitle,
       };
-      const doc = (
-        <ResumePdfDocument
-          resumeText={result.resume}
-          candidate={candidate}
-          templateStyle={templateStyle}
-        />
-      );
+      const doc = (<ResumePdfDocument resumeText={result.resume} candidate={candidate} templateStyle={templateStyle} />);
       const blob = await pdf(doc).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `${(form.fullName || "Resume").replace(/\s+/g, "_")}_Resume.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      alert("Failed to generate PDF. Please try copying the resume instead.");
-    }
+    } catch (e) { alert("Failed to generate PDF. Please try copying the resume instead."); }
+  };
+
+  const generateCoverLetter = async () => {
+    setCoverLetterLoading(true); setCoverLetter(null);
+    try {
+      const prompt = `Write a professional cover letter for the following candidate applying for a job in ${form.country}.
+
+CANDIDATE DETAILS:
+Name: ${form.fullName}
+Target Role: ${form.jobTitle}
+City: ${form.city}
+Email: ${form.email || trackingEmail}
+
+THEIR RESUME SUMMARY:
+${result.resume.slice(0, 1500)}
+
+JOB DESCRIPTION:
+${form.jobDescription || "General professional role in " + form.country}
+
+COVER LETTER RULES:
+1. Follow ${form.country} cover letter conventions exactly
+2. Start with "Dear Hiring Manager,"
+3. 3-4 paragraphs maximum — opening, skills/experience, why this company, closing
+4. Professional but warm tone
+5. End with "Sincerely," on its own line
+6. Do NOT use asterisks, hashtags or markdown
+7. Keep it to one page
+8. Reference actual details from the resume — do not invent anything
+9. For Gulf/Middle East: more formal tone, mention visa status if provided
+10. For UK: slightly more formal than US style`;
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] })
+      });
+      const data = await res.json();
+      const text = data?.text || "";
+      if(text.length > 50){ setCoverLetter(text); }
+      else { alert("Could not generate cover letter. Please try again."); }
+    } catch(e) { alert("Error generating cover letter: " + e.message); }
+    setCoverLetterLoading(false);
+  };
+
+  const downloadCoverLetterPdf = async () => {
+    try {
+      const { pdf } = await import("@react-pdf/renderer");
+      const templateStyle = getTemplateForCountry(form.country);
+      const candidate = {
+        fullName: form.fullName, email: form.email || trackingEmail,
+        phone: form.phone, city: form.city, linkedIn: form.linkedIn, jobTitle: form.jobTitle,
+      };
+      const doc = (<CoverLetterPdfDocument coverLetterText={coverLetter} candidate={candidate} templateStyle={templateStyle} />);
+      const blob = await pdf(doc).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(form.fullName || "Cover_Letter").replace(/\s+/g, "_")}_Cover_Letter.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch(e) { alert("Failed to generate PDF. Please try copying the cover letter instead."); }
   };
 
   const sendResumeEmail = async () => {
     const emailToUse = trackingEmail || form.email;
-    if(!emailToUse || !emailToUse.includes('@')){
-      alert("No email found. Please enter your email first.");
-      return;
-    }
+    if(!emailToUse || !emailToUse.includes('@')){ alert("No email found. Please enter your email first."); return; }
     setEmailSending(true);
     try {
       const res = await fetch("/api/send-email", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
-          email: emailToUse,
-          name: form.fullName,
-          resumeText: result.resume,
-          atsScore: result.ats.score,
-          country: form.country
+          email: emailToUse, name: form.fullName,
+          resumeText: result.resume, atsScore: result.ats.score, country: form.country
         })
       });
       const data = await res.json();
-      if(data.success){
-        setEmailSent(true);
-        setTimeout(()=>setEmailSent(false), 4000);
-      } else {
-        alert("Failed to send email. Please try copying the resume instead.");
-      }
-    } catch {
-      alert("Failed to send email. Please try copying the resume instead.");
-    }
+      if(data.success){ setEmailSent(true); setTimeout(()=>setEmailSent(false), 4000); }
+      else { alert("Failed to send email. Please try copying the resume instead."); }
+    } catch { alert("Failed to send email. Please try copying the resume instead."); }
     setEmailSending(false);
   };
 
@@ -455,39 +439,23 @@ ${atsJobDesc}`;
                     <h2 style={{fontSize:22,fontWeight:800,margin:"0 0 8px",color:"#f0f0f8"}}>Free Limit Reached!</h2>
                     <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>You've used your {FREE_LIMIT} free resumes. Upgrade to Pro or enter a coupon code!</p>
                   </div>
-
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-                    <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>
-                      💎 ₹299/month
-                    </a>
-                    <a href="/pricing" style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.3)",borderRadius:12,color:"#43e97b",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>
-                      ♾️ ₹2999 Lifetime
-                    </a>
+                    <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>💎 ₹299/month</a>
+                    <a href="/pricing" style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.3)",borderRadius:12,color:"#43e97b",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>♾️ ₹2999 Lifetime</a>
                   </div>
-
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
                     <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
                     <span style={{fontSize:12,color:"#4a4a6a"}}>or use a coupon code</span>
                     <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
                   </div>
-
                   <div style={{marginBottom:8}}>
                     <div style={{display:"flex",gap:8}}>
-                      <input
-                        placeholder="Enter coupon code"
-                        value={couponCode}
-                        onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponError("");setCouponSuccess("");}}
-                        onKeyDown={e=>e.key==="Enter"&&handleCouponApply()}
-                        style={{flex:1,background:"#1c1c28",border:`1px solid ${couponError?"#ff6584":couponSuccess?"#43e97b":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"11px 14px",outline:"none"}}
-                      />
-                      <button onClick={handleCouponApply} disabled={applyingCoupon} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:10,padding:"0 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}}>
-                        {applyingCoupon?"...":"Apply"}
-                      </button>
+                      <input placeholder="Enter coupon code" value={couponCode} onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponError("");setCouponSuccess("");}} onKeyDown={e=>e.key==="Enter"&&handleCouponApply()} style={{flex:1,background:"#1c1c28",border:`1px solid ${couponError?"#ff6584":couponSuccess?"#43e97b":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"11px 14px",outline:"none"}}/>
+                      <button onClick={handleCouponApply} disabled={applyingCoupon} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:10,padding:"0 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}}>{applyingCoupon?"...":"Apply"}</button>
                     </div>
                     {couponError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {couponError}</div>}
                     {couponSuccess&&<div style={{fontSize:12,color:"#43e97b",marginTop:6}}>{couponSuccess}</div>}
                   </div>
-
                   <button onClick={()=>setShowEmailPopup(false)} style={{width:"100%",background:"transparent",border:"1px solid #2a2a3d",borderRadius:12,color:"#7878a0",fontFamily:"inherit",fontSize:13,padding:"11px",cursor:"pointer",marginTop:8}}>Maybe Later</button>
                 </>
               ) : (
@@ -497,44 +465,23 @@ ${atsJobDesc}`;
                     <h2 style={{fontSize:22,fontWeight:800,margin:"0 0 8px",color:"#f0f0f8"}}>Almost Ready!</h2>
                     <p style={{color:"#7878a0",fontSize:14,lineHeight:1.6,margin:0}}>Enter your email to get <strong style={{color:"#43e97b"}}>{FREE_LIMIT} free resumes</strong> — no credit card needed!</p>
                   </div>
-
                   <div style={{marginBottom:12}}>
-                    <input
-                      type="email"
-                      placeholder="your@email.com"
-                      value={trackingEmail}
-                      onChange={e=>{setTrackingEmail(e.target.value);setEmailError("");}}
-                      onKeyDown={e=>e.key==="Enter"&&handleEmailSubmit()}
-                      style={{width:"100%",background:"#1c1c28",border:`1px solid ${emailError?"#ff6584":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:15,padding:"12px 16px",outline:"none",boxSizing:"border-box"}}
-                    />
+                    <input type="email" placeholder="your@email.com" value={trackingEmail} onChange={e=>{setTrackingEmail(e.target.value);setEmailError("");}} onKeyDown={e=>e.key==="Enter"&&handleEmailSubmit()} style={{width:"100%",background:"#1c1c28",border:`1px solid ${emailError?"#ff6584":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:15,padding:"12px 16px",outline:"none",boxSizing:"border-box"}}/>
                     {emailError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {emailError}</div>}
                   </div>
-
                   {!showCouponField ? (
-                    <button onClick={()=>setShowCouponField(true)} style={{background:"none",border:"none",color:"#6c63ff",cursor:"pointer",fontSize:12,padding:"0 0 12px",fontFamily:"inherit",textDecoration:"underline"}}>
-                      🎟️ Have a coupon code?
-                    </button>
+                    <button onClick={()=>setShowCouponField(true)} style={{background:"none",border:"none",color:"#6c63ff",cursor:"pointer",fontSize:12,padding:"0 0 12px",fontFamily:"inherit",textDecoration:"underline"}}>🎟️ Have a coupon code?</button>
                   ) : (
                     <div style={{marginBottom:12}}>
                       <div style={{display:"flex",gap:8}}>
-                        <input
-                          placeholder="Enter coupon code"
-                          value={couponCode}
-                          onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponError("");setCouponSuccess("");}}
-                          style={{flex:1,background:"#1c1c28",border:`1px solid ${couponError?"#ff6584":couponSuccess?"#43e97b":"rgba(108,99,255,0.3)"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"11px 14px",outline:"none"}}
-                        />
-                        <button onClick={handleCouponApply} disabled={applyingCoupon} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:10,padding:"0 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700}}>
-                          {applyingCoupon?"...":"Apply"}
-                        </button>
+                        <input placeholder="Enter coupon code" value={couponCode} onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponError("");setCouponSuccess("");}} style={{flex:1,background:"#1c1c28",border:`1px solid ${couponError?"#ff6584":couponSuccess?"#43e97b":"rgba(108,99,255,0.3)"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"11px 14px",outline:"none"}}/>
+                        <button onClick={handleCouponApply} disabled={applyingCoupon} style={{background:"rgba(108,99,255,0.2)",border:"1px solid rgba(108,99,255,0.3)",color:"#6c63ff",borderRadius:10,padding:"0 16px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700}}>{applyingCoupon?"...":"Apply"}</button>
                       </div>
                       {couponError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {couponError}</div>}
                       {couponSuccess&&<div style={{fontSize:12,color:"#43e97b",marginTop:6}}>{couponSuccess}</div>}
                     </div>
                   )}
-
-                  <button onClick={handleEmailSubmit} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:15,fontWeight:700,padding:"14px",cursor:"pointer",marginBottom:10}}>
-                    ✦ Generate My Free Resume
-                  </button>
+                  <button onClick={handleEmailSubmit} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:15,fontWeight:700,padding:"14px",cursor:"pointer",marginBottom:10}}>✦ Generate My Free Resume</button>
                   <div style={{fontSize:11,color:"#4a4a6a",textAlign:"center"}}>🔒 We respect your privacy. No spam ever.</div>
                 </>
               )}
@@ -550,15 +497,9 @@ ${atsJobDesc}`;
           <div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",color:"#a89fff",fontSize:12,padding:"4px 14px",borderRadius:100,marginBottom:16}}>🌍 AI-POWERED · GLOBAL · ATS-READY</div>
           <h1 style={{fontSize:"clamp(28px,6vw,52px)",fontWeight:800,background:"linear-gradient(135deg,#fff 30%,#a89fff 70%,#ff6584 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"0 0 12px"}}>ResumeForge AI</h1>
           <p style={{color:"#7878a0",fontSize:16,margin:"0 0 12px"}}>Build country-specific, ATS-optimized resumes for any job, anywhere.</p>
-          {isUnlimited&&<div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#a89fff"}}>
-            ♾️ Unlimited Access Active
-          </div>}
-          {!isUnlimited&&trackingEmail&&!limitReached&&<div style={{display:"inline-block",background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#43e97b"}}>
-            ✅ {resumesRemaining} free resume{resumesRemaining!==1?"s":""} remaining
-          </div>}
-          {limitReached&&!isUnlimited&&<div style={{display:"inline-block",background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#ff6584"}}>
-            🔒 Free limit reached — <a href="/pricing" style={{color:"#6c63ff",textDecoration:"none",fontWeight:700}}>Upgrade to Pro</a>
-          </div>}
+          {isUnlimited&&<div style={{display:"inline-block",background:"rgba(108,99,255,0.15)",border:"1px solid rgba(108,99,255,0.3)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#a89fff"}}>♾️ Unlimited Access Active</div>}
+          {!isUnlimited&&trackingEmail&&!limitReached&&<div style={{display:"inline-block",background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#43e97b"}}>✅ {resumesRemaining} free resume{resumesRemaining!==1?"s":""} remaining</div>}
+          {limitReached&&!isUnlimited&&<div style={{display:"inline-block",background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",borderRadius:100,padding:"4px 14px",fontSize:12,color:"#ff6584"}}>🔒 Free limit reached — <a href="/pricing" style={{color:"#6c63ff",textDecoration:"none",fontWeight:700}}>Upgrade to Pro</a></div>}
         </div>
 
         <div style={{display:"flex",gap:6,background:"#13131a",border:"1px solid #2a2a3d",borderRadius:12,padding:5,maxWidth:380,margin:"0 auto 32px"}}>
@@ -601,21 +542,15 @@ ${atsJobDesc}`;
                 </select>
               </div>
             </div>
-            {currentPhoneCode&&<div style={{marginTop:10,background:"rgba(108,99,255,0.08)",border:"1px solid rgba(108,99,255,0.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#a89fff"}}>
-              💡 You are currently in <strong>{form.currentLocation}</strong> — your phone number should start with <strong>{currentPhoneCode}</strong>
-            </div>}
-            {form.currentLocation&&form.country&&form.currentLocation!==form.country&&<div style={{marginTop:8,background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#43e97b"}}>
-              ✅ Building a <strong>{form.country}</strong> resume for someone currently in <strong>{form.currentLocation}</strong>
-            </div>}
+            {currentPhoneCode&&<div style={{marginTop:10,background:"rgba(108,99,255,0.08)",border:"1px solid rgba(108,99,255,0.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#a89fff"}}>💡 You are currently in <strong>{form.currentLocation}</strong> — your phone number should start with <strong>{currentPhoneCode}</strong></div>}
+            {form.currentLocation&&form.country&&form.currentLocation!==form.country&&<div style={{marginTop:8,background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#43e97b"}}>✅ Building a <strong>{form.country}</strong> resume for someone currently in <strong>{form.currentLocation}</strong></div>}
           </div>
 
           {extraFields.length>0&&<div style={{background:"#13131a",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:6}}>🌍 {form.country}-Specific Fields</div>
             <div style={{fontSize:12,color:"#7878a0",marginBottom:16}}>These fields are required for {form.country} job applications and boost your ATS score.</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-              {extraFields.map(f=>(
-                <div key={f.key}><label style={{fontSize:11,color:"#a89fff",display:"block",marginBottom:5,textTransform:"uppercase"}}>{f.label}</label><input placeholder="" value={form[f.key]||""} onChange={e=>set(f.key,e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid rgba(108,99,255,0.3)",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
-              ))}
+              {extraFields.map(f=>(<div key={f.key}><label style={{fontSize:11,color:"#a89fff",display:"block",marginBottom:5,textTransform:"uppercase"}}>{f.label}</label><input placeholder="" value={form[f.key]||""} onChange={e=>set(f.key,e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid rgba(108,99,255,0.3)",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>))}
             </div>
           </div>}
 
@@ -624,9 +559,7 @@ ${atsJobDesc}`;
             <div style={{marginBottom:14}}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Target Job Title *</label><input placeholder="" value={form.jobTitle} onChange={e=>set("jobTitle",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/></div>
             <div style={{marginBottom:14}}>
               <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:5,textTransform:"uppercase"}}>Professional Summary <span style={{color:"#4a4a6a",fontSize:10,textTransform:"none"}}>(optional — AI will write one if blank)</span></label>
-              <div style={{background:"rgba(108,99,255,0.05)",border:"1px solid rgba(108,99,255,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:8,lineHeight:1.6}}>
-                💡 <strong style={{color:"#a89fff"}}>Tip:</strong> Write your own summary for best results. The AI will only polish your language, not change your story.
-              </div>
+              <div style={{background:"rgba(108,99,255,0.05)",border:"1px solid rgba(108,99,255,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:8,lineHeight:1.6}}>💡 <strong style={{color:"#a89fff"}}>Tip:</strong> Write your own summary for best results. The AI will only polish your language, not change your story.</div>
               <textarea placeholder="" value={form.summary} onChange={e=>set("summary",e.target.value)} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/>
             </div>
             <div>
@@ -649,16 +582,12 @@ ${atsJobDesc}`;
 
           <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:"#6c63ff",marginBottom:8}}>Work Experience</div>
-            <div style={{background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:16,lineHeight:1.6}}>
-              💡 <strong style={{color:"#43e97b"}}>Important:</strong> Fill in YOUR actual experience, roles and achievements. The AI will only polish the language!
-            </div>
+            <div style={{background:"rgba(67,233,123,0.05)",border:"1px solid rgba(67,233,123,0.15)",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#7878a0",marginBottom:16,lineHeight:1.6}}>💡 <strong style={{color:"#43e97b"}}>Important:</strong> Fill in YOUR actual experience, roles and achievements. The AI will only polish the language!</div>
             {experiences.map((exp,i)=>(
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
                 {experiences.length>1&&<button onClick={()=>setExperiences(ex=>ex.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
-                  {[["Company","company"],["Role / Title","role"],["Duration","duration"]].map(([l,k])=>(
-                    <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder="" value={exp[k]} onChange={e=>updateExp(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
-                  ))}
+                  {[["Company","company"],["Role / Title","role"],["Duration","duration"]].map(([l,k])=>(<div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder="" value={exp[k]} onChange={e=>updateExp(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>))}
                 </div>
                 <label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>Your Actual Responsibilities & Achievements</label>
                 <textarea placeholder="" value={exp.description} onChange={e=>updateExp(i,"description",e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",minHeight:100,resize:"vertical",boxSizing:"border-box"}}/>
@@ -673,9 +602,7 @@ ${atsJobDesc}`;
               <div key={i} style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:16,marginBottom:10,position:"relative"}}>
                 {education.length>1&&<button onClick={()=>setEducation(ed=>ed.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:10,right:10,background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:6,width:26,height:26,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
-                  {[["Institution","institution"],["Degree / Qualification","degree"],["Year","year"]].map(([l,k])=>(
-                    <div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder="" value={edu[k]} onChange={e=>updateEdu(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>
-                  ))}
+                  {[["Institution","institution"],["Degree / Qualification","degree"],["Year","year"]].map(([l,k])=>(<div key={k}><label style={{fontSize:11,color:"#7878a0",display:"block",marginBottom:4,textTransform:"uppercase"}}>{l}</label><input placeholder="" value={edu[k]} onChange={e=>updateEdu(i,k,e.target.value)} style={{width:"100%",background:"#0a0a0f",border:"1px solid #2a2a3d",borderRadius:7,color:"#f0f0f8",fontFamily:"inherit",fontSize:13,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}/></div>))}
                 </div>
               </div>
             ))}
@@ -709,23 +636,14 @@ ${atsJobDesc}`;
                   ))}
                 </div>
               </div>
-
               {result.ats.tips?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:18,marginBottom:12}}>
                 <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6c63ff",marginBottom:14}}>💡 How to Improve Your ATS Score</div>
-                {result.ats.tips.map((t,i)=>(
-                  <div key={i} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}>
-                    <div style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</div>
-                    <div style={{fontSize:13,color:"#e0e0f0",lineHeight:1.6}}>{t}</div>
-                  </div>
-                ))}
+                {result.ats.tips.map((t,i)=>(<div key={i} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}><div style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</div><div style={{fontSize:13,color:"#e0e0f0",lineHeight:1.6}}>{t}</div></div>))}
               </div>}
-
               {result.ats.missing?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(255,101,132,0.2)",borderRadius:12,padding:18}}>
                 <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#ff6584",marginBottom:12}}>⚠ Missing from Your Resume</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {result.ats.missing.map((m,i)=>(
-                    <div key={i} style={{background:"rgba(255,101,132,0.08)",border:"1px solid rgba(255,101,132,0.25)",color:"#ff9eb5",padding:"6px 14px",borderRadius:100,fontSize:12}}>✗ {m}</div>
-                  ))}
+                  {result.ats.missing.map((m,i)=>(<div key={i} style={{background:"rgba(255,101,132,0.08)",border:"1px solid rgba(255,101,132,0.25)",color:"#ff9eb5",padding:"6px 14px",borderRadius:100,fontSize:12}}>✗ {m}</div>))}
                 </div>
               </div>}
             </div>
@@ -751,6 +669,34 @@ ${atsJobDesc}`;
               </div>
               <a href="/pricing" style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",padding:"10px 24px",borderRadius:100,fontSize:14,fontWeight:700,textDecoration:"none",display:"inline-block",whiteSpace:"nowrap"}}>View Plans →</a>
             </div>
+
+            {/* Cover Letter Section */}
+            <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,padding:24,marginTop:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
+                <div>
+                  <h2 style={{margin:"0 0 4px",fontSize:16,fontWeight:700}}>📝 Cover Letter</h2>
+                  <div style={{fontSize:12,color:"#7878a0"}}>Auto-generated to match your resume & job description</div>
+                </div>
+                {!coverLetter&&<button onClick={generateCoverLetter} disabled={coverLetterLoading} style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:10,color:"#fff",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"10px 20px",cursor:coverLetterLoading?"not-allowed":"pointer",opacity:coverLetterLoading?0.6:1}}>
+                  {coverLetterLoading?"⚙ Generating...":"✦ Generate Cover Letter"}
+                </button>}
+              </div>
+
+              {coverLetterLoading&&<div style={{textAlign:"center",padding:24}}>
+                <div style={{width:36,height:36,border:"3px solid #2a2a3d",borderTopColor:"#6c63ff",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 10px"}}/>
+                <p style={{color:"#7878a0",fontSize:13}}>Writing your {form.country} cover letter...</p>
+              </div>}
+
+              {coverLetter&&<>
+                <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+                  <button onClick={()=>{navigator.clipboard.writeText(coverLetter);setCoverLetterCopied(true);setTimeout(()=>setCoverLetterCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>{coverLetterCopied?"✓ Copied!":"⎘ Copy Cover Letter"}</button>
+                  <button onClick={downloadCoverLetterPdf} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>⬇ Download Cover Letter PDF</button>
+                  <button onClick={()=>setCoverLetter(null)} style={{background:"rgba(108,99,255,0.1)",border:"1px solid rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>↺ Regenerate</button>
+                </div>
+                <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:20,fontSize:13,lineHeight:1.9,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"'Courier New',monospace"}}>{coverLetter}</pre>
+              </>}
+            </div>
+
           </div>}
         </>}
 
@@ -762,12 +708,10 @@ ${atsJobDesc}`;
           <button onClick={analyzeATS} disabled={atsLoading||!atsResumeText.trim()||!atsJobDesc.trim()} style={{width:"100%",background:"linear-gradient(135deg,#6c63ff,#9b59f5)",border:"none",borderRadius:12,color:"#fff",fontFamily:"inherit",fontSize:16,fontWeight:700,padding:17,cursor:"pointer",opacity:atsLoading||!atsResumeText.trim()||!atsJobDesc.trim()?0.5:1}}>
             {atsLoading?"⚙ Analyzing your resume...":"◎ Check My ATS Score"}
           </button>
-
           {atsLoading&&<div style={{textAlign:"center",padding:30}}>
             <div style={{width:40,height:40,border:"3px solid #2a2a3d",borderTopColor:"#6c63ff",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 12px"}}/>
             <p style={{color:"#7878a0",fontSize:14}}>Analyzing your resume...</p>
           </div>}
-
           {atsResult&&<div style={{marginTop:24}}>
             <div style={{textAlign:"center",marginBottom:24,padding:20,background:"#1c1c28",borderRadius:12}}>
               <div style={{fontSize:72,fontWeight:800,color:sc(atsResult.overall),lineHeight:1}}>{atsResult.overall}</div>
@@ -782,20 +726,14 @@ ${atsJobDesc}`;
             ))}
             {atsResult.tips?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:18,marginTop:16,marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:"#6c63ff",marginBottom:14,letterSpacing:"0.08em"}}>💡 Improvement Tips</div>
-              {atsResult.tips.map((t,i)=>(
-                <div key={i} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}>
-                  <div style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
-                  <div style={{fontSize:13,color:"#e0e0f0",lineHeight:1.6}}>{t}</div>
-                </div>
-              ))}
+              {atsResult.tips.map((t,i)=>(<div key={i} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}><div style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div><div style={{fontSize:13,color:"#e0e0f0",lineHeight:1.6}}>{t}</div></div>))}
             </div>}
             {atsResult.missing_keywords?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(255,101,132,0.15)",borderRadius:12,padding:18}}>
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:"#ff6584",marginBottom:12,letterSpacing:"0.08em"}}>🔍 Missing Keywords</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {atsResult.missing_keywords.map(k=><div key={k} style={{background:"rgba(255,101,132,0.08)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff9eb5",padding:"5px 12px",borderRadius:100,fontSize:12}}>+ {k}</div>)}
+                {atsResult.missing_keywords.map(k=>(<div key={k} style={{background:"rgba(255,101,132,0.08)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff9eb5",padding:"5px 12px",borderRadius:100,fontSize:12}}>+ {k}</div>))}
               </div>
             </div>}
-
             <div style={{background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(155,89,245,0.15))",border:"1px solid rgba(108,99,255,0.3)",borderRadius:16,padding:20,marginTop:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:"#f0f0f8",marginBottom:4}}>💎 Want to build an ATS-optimized resume?</div>
