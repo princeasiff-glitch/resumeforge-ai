@@ -29,6 +29,28 @@ const COUNTRY_PHONE = {
 const SUPPORT_EMAIL = "resumeforgeai.support@gmail.com";
 const FREE_LIMIT = 2;
 
+const HOW_TO_STEPS = [
+  { title: "Enter Your Personal Details", desc: "Fill in your full name, email, phone, city and LinkedIn URL. Select your current country so the phone code auto-fills correctly." },
+  { title: "Select Your Target Country", desc: "Choose the country where you want to work. This is the most important step — the AI tailors your resume format, language and conventions specifically for that country." },
+  { title: "Fill Your Target Role & Experience", desc: "Enter your job title, add your skills one by one, then fill in your actual work experience and education. The more detail you provide, the better your resume will be." },
+  { title: "Paste a Job Description (Recommended)", desc: "Pasting the job description you're applying for boosts your ATS score by 15-20 points by matching keywords automatically." },
+  { title: "Generate Your Resume", desc: "Click \"Generate My ATS-Optimized Resume\" and wait 10-20 seconds. Your resume and ATS score will appear below." },
+  { title: "Download, Copy or Email", desc: "Copy the resume text, download it as a styled PDF, or email it directly to yourself. You can also generate a matching Cover Letter with one click!" },
+];
+
+const FAQS = [
+  { q: "Is my personal data safe?", a: "Yes — your data is stored only in your browser (localStorage) and is never shared or sold. We use it solely to generate your resume." },
+  { q: "Which countries are supported?", a: "We support 30+ countries including UAE, India, USA, UK, Canada, Australia, Germany, Singapore, South Africa and more. Each country gets a tailored resume format." },
+  { q: "What is an ATS score?", a: "ATS stands for Applicant Tracking System — software used by employers to filter resumes. Our AI scores your resume on keyword match, formatting, readability and skills coverage so you know how likely it is to pass automated screening." },
+  { q: "What's the difference between Free and Pro?", a: "Free gives you 2 resumes to try the app. Pro (₹299/month or ₹2999 lifetime) gives you unlimited resumes, unlimited cover letters, full ATS analysis and priority support." },
+  { q: "Can I generate resumes for different countries?", a: "Yes! Each time you generate a resume you can select a different target country. The AI adjusts the layout, language and format accordingly." },
+  { q: "How accurate is the ATS score?", a: "Our ATS score is AI-generated and gives a strong indication of how well your resume matches the job description. It's not a guarantee but is a reliable guide for improvement." },
+  { q: "Can I edit the resume after generating?", a: "Yes — copy the resume text and paste it into Microsoft Word or Google Docs for final editing and formatting." },
+  { q: "What payment methods are accepted?", a: "Indian users can pay via UPI (GPay, PhonePe, Paytm), Credit/Debit cards and Net Banking. International users can pay via Credit/Debit cards. All payments are secured by Razorpay." },
+  { q: "I have a coupon code — where do I enter it?", a: "When the email popup appears, click the small \"Have a coupon code?\" link below the email field to reveal the coupon entry box." },
+  { q: "How do I get my resume emailed to me?", a: "After generating your resume, click the \"📧 Email Me This Resume\" button. Your resume will be sent to the email address you provided." },
+];
+
 export default function App() {
   const [tab, setTab] = useState("builder");
   const [loading, setLoading] = useState(false);
@@ -60,10 +82,12 @@ export default function App() {
   const [couponSuccess, setCouponSuccess] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
-  // Cover letter states
   const [coverLetter, setCoverLetter] = useState(null);
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
   const [coverLetterCopied, setCoverLetterCopied] = useState(false);
+
+  const [showHowTo, setShowHowTo] = useState(false);
+  const [openFaq, setOpenFaq] = useState(null);
 
   useEffect(() => {
     try {
@@ -121,10 +145,7 @@ export default function App() {
   };
 
   const handleGenerateClick = () => {
-    if(!form.fullName||!form.country||!form.jobTitle){
-      setError("Please fill Name, Target Country, and Job Title.");
-      return;
-    }
+    if(!form.fullName||!form.country||!form.jobTitle){ setError("Please fill Name, Target Country, and Job Title."); return; }
     if(isUnlimited){ generate(trackingEmail); return; }
     if(limitReached){ setShowEmailPopup(true); return; }
     if(!trackingEmail){ setShowEmailPopup(true); return; }
@@ -132,106 +153,52 @@ export default function App() {
   };
 
   const handleEmailSubmit = async () => {
-    if(!trackingEmail||!trackingEmail.includes('@')){
-      setEmailError("Please enter a valid email address");
-      return;
-    }
+    if(!trackingEmail||!trackingEmail.includes('@')){ setEmailError("Please enter a valid email address"); return; }
     setEmailError("");
     try {
-      const res = await fetch("/api/track", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({email: trackingEmail})
-      });
+      const res = await fetch("/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:trackingEmail})});
       const data = await res.json();
-      if(!data.allowed && !data.couponApplied){
-        setLimitReached(true);
-        setResumesRemaining(0);
-        try {
-          localStorage.setItem("resumeforge_email", trackingEmail);
-          localStorage.setItem("resumeforge_remaining", "0");
-          localStorage.setItem("resumeforge_limit", "true");
-        } catch {}
+      if(!data.allowed&&!data.couponApplied){
+        setLimitReached(true); setResumesRemaining(0);
+        try{localStorage.setItem("resumeforge_email",trackingEmail);localStorage.setItem("resumeforge_remaining","0");localStorage.setItem("resumeforge_limit","true");}catch{}
         return;
       }
-      const remaining = data.remaining || 0;
+      const remaining = data.remaining||0;
       setResumesRemaining(remaining);
-      try {
-        localStorage.setItem("resumeforge_email", trackingEmail);
-        localStorage.setItem("resumeforge_remaining", remaining.toString());
-        localStorage.setItem("resumeforge_limit", "false");
-      } catch {}
+      try{localStorage.setItem("resumeforge_email",trackingEmail);localStorage.setItem("resumeforge_remaining",remaining.toString());localStorage.setItem("resumeforge_limit","false");}catch{}
       setShowEmailPopup(false);
       generate(trackingEmail);
-    } catch {
-      setShowEmailPopup(false);
-      generate(trackingEmail);
-    }
+    }catch{setShowEmailPopup(false);generate(trackingEmail);}
   };
 
   const handleCouponApply = async () => {
-    if(!couponCode.trim()){ setCouponError("Please enter a coupon code"); return; }
-    if(!trackingEmail||!trackingEmail.includes('@')){ setCouponError("Please enter your email first"); return; }
-    setCouponError(""); setCouponSuccess(""); setApplyingCoupon(true);
+    if(!couponCode.trim()){setCouponError("Please enter a coupon code");return;}
+    if(!trackingEmail||!trackingEmail.includes('@')){setCouponError("Please enter your email first");return;}
+    setCouponError("");setCouponSuccess("");setApplyingCoupon(true);
     try {
-      const res = await fetch("/api/track", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({email: trackingEmail, couponCode: couponCode.trim()})
-      });
+      const res = await fetch("/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:trackingEmail,couponCode:couponCode.trim()})});
       const data = await res.json();
-      if(data.couponError){ setCouponError(data.couponError); setApplyingCoupon(false); return; }
+      if(data.couponError){setCouponError(data.couponError);setApplyingCoupon(false);return;}
       if(data.couponApplied){
-        if(data.couponType === "unlimited"){
-          setIsUnlimited(true); setLimitReached(false); setResumesRemaining(999);
-          setCouponSuccess("🎉 Unlimited access granted!");
-          try {
-            localStorage.setItem("resumeforge_unlimited", "true");
-            localStorage.setItem("resumeforge_limit", "false");
-            localStorage.setItem("resumeforge_email", trackingEmail);
-          } catch {}
-          setTimeout(() => { setShowEmailPopup(false); generate(trackingEmail); }, 1500);
-        }
-        if(data.couponType === "free_resumes"){
-          setResumesRemaining(data.remaining); setLimitReached(false);
-          setCouponSuccess(`🎉 ${data.message}`);
-          try {
-            localStorage.setItem("resumeforge_remaining", data.remaining.toString());
-            localStorage.setItem("resumeforge_limit", "false");
-            localStorage.setItem("resumeforge_email", trackingEmail);
-          } catch {}
-          setTimeout(() => { setShowEmailPopup(false); generate(trackingEmail); }, 1500);
-        }
-        if(data.couponType === "discount"){
-          setCouponSuccess(`🎉 ${data.discountPercent}% discount applied! Redirecting to pricing...`);
-          setTimeout(() => { window.location.href = `/pricing?discount=${data.discountPercent}&coupon=${couponCode}`; }, 1500);
-        }
+        if(data.couponType==="unlimited"){setIsUnlimited(true);setLimitReached(false);setResumesRemaining(999);setCouponSuccess("🎉 Unlimited access granted!");try{localStorage.setItem("resumeforge_unlimited","true");localStorage.setItem("resumeforge_limit","false");localStorage.setItem("resumeforge_email",trackingEmail);}catch{}setTimeout(()=>{setShowEmailPopup(false);generate(trackingEmail);},1500);}
+        if(data.couponType==="free_resumes"){setResumesRemaining(data.remaining);setLimitReached(false);setCouponSuccess(`🎉 ${data.message}`);try{localStorage.setItem("resumeforge_remaining",data.remaining.toString());localStorage.setItem("resumeforge_limit","false");localStorage.setItem("resumeforge_email",trackingEmail);}catch{}setTimeout(()=>{setShowEmailPopup(false);generate(trackingEmail);},1500);}
+        if(data.couponType==="discount"){setCouponSuccess(`🎉 ${data.discountPercent}% discount applied! Redirecting to pricing...`);setTimeout(()=>{window.location.href=`/pricing?discount=${data.discountPercent}&coupon=${couponCode}`;},1500);}
       }
-    } catch { setCouponError("Something went wrong. Please try again."); }
+    }catch{setCouponError("Something went wrong. Please try again.");}
     setApplyingCoupon(false);
   };
 
   const generate = async (email) => {
-    setError(""); setLoading(true); setResult(null); setCoverLetter(null);
-    setShowEmailPopup(false);
-    if(!isUnlimited && email && resumesRemaining > 0){
-      try {
-        const res = await fetch("/api/track", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({email})
-        });
+    setError("");setLoading(true);setResult(null);setCoverLetter(null);setShowEmailPopup(false);
+    if(!isUnlimited&&email&&resumesRemaining>0){
+      try{
+        const res = await fetch("/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
         const data = await res.json();
-        if(data.remaining !== undefined){
-          setResumesRemaining(data.remaining);
-          try { localStorage.setItem("resumeforge_remaining", data.remaining.toString()); } catch {}
-        }
-        if(!data.allowed && !isUnlimited){
-          setLimitReached(true); setLoading(false); setShowEmailPopup(true); return;
-        }
-      } catch {}
+        if(data.remaining!==undefined){setResumesRemaining(data.remaining);try{localStorage.setItem("resumeforge_remaining",data.remaining.toString());}catch{}}
+        if(!data.allowed&&!isUnlimited){setLimitReached(true);setLoading(false);setShowEmailPopup(true);return;}
+      }catch{}
     }
-    try {
+    try{
       const countryExtra = extraFields.map(f=>`${f.label}: ${form[f.key]||"Not specified"}`).join("\n");
       const prompt = `Write a polished professional resume for ${form.country} job market. Follow exact resume conventions for ${form.country}.
 
@@ -277,25 +244,25 @@ Then ONLY this JSON:
 
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-      let resumeText = data?.text || "";
+      let resumeText = data?.text||"";
       let ats = {score:72,keyword:68,formatting:85,readability:78,skills:70,rating:"Good",tips:[],missing:[]};
-      if(data.ats){ ats = {...ats,...data.ats}; }
+      if(data.ats){ats={...ats,...data.ats};}
       else if(resumeText.includes("---ATS_DATA---")){
         const parts = resumeText.split("---ATS_DATA---");
         resumeText = parts[0].trim();
-        try{ const jsonStr = parts[1].replace(/```json|```/g,"").trim(); ats = {...ats,...JSON.parse(jsonStr)}; }catch{}
+        try{const jsonStr=parts[1].replace(/```json|```/g,"").trim();ats={...ats,...JSON.parse(jsonStr)};}catch{}
       }
-      if(!resumeText||resumeText.length<50) resumeText = data?.text||"No resume generated. Please try again.";
-      const newResult = {resume:resumeText,ats};
+      if(!resumeText||resumeText.length<50) resumeText=data?.text||"No resume generated. Please try again.";
+      const newResult={resume:resumeText,ats};
       setResult(newResult);
-      try { localStorage.setItem("resumeforge_result", JSON.stringify(newResult)); } catch {}
+      try{localStorage.setItem("resumeforge_result",JSON.stringify(newResult));}catch{}
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
   };
 
   const analyzeATS = async () => {
-    setAtsLoading(true); setAtsResult(null);
-    try {
+    setAtsLoading(true);setAtsResult(null);
+    try{
       const prompt = `You are an ATS expert. Analyze this resume against the job description carefully.
 Return ONLY a JSON object with no other text:
 {"overall":85,"keyword":80,"formatting":90,"readability":88,"skills":82,"rating":"Good","tips":["specific tip 1","specific tip 2","specific tip 3"],"missing_keywords":["keyword1","keyword2","keyword3"]}
@@ -307,57 +274,45 @@ JOB DESCRIPTION:
 ${atsJobDesc}`;
       const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data = await res.json();
-      if(data.ats){ setAtsResult({overall:data.ats.score||data.ats.overall||70,...data.ats}); }
-      else {
-        const text = data?.text || "{}";
-        try{
-          const clean = text.replace(/```json|```/g,"").trim();
-          const jsonMatch = clean.match(/\{[\s\S]*\}/);
-          if(jsonMatch) setAtsResult(JSON.parse(jsonMatch[0]));
-          else throw new Error("No JSON");
-        }catch{
-          setAtsResult({overall:70,keyword:65,formatting:80,readability:75,skills:68,rating:"Needs Improvement",tips:["Add more keywords from job description","Use standard section headings","Quantify achievements with numbers"],missing_keywords:[]});
-        }
+      if(data.ats){setAtsResult({overall:data.ats.score||data.ats.overall||70,...data.ats});}
+      else{
+        const text=data?.text||"{}";
+        try{const clean=text.replace(/```json|```/g,"").trim();const jsonMatch=clean.match(/\{[\s\S]*\}/);if(jsonMatch)setAtsResult(JSON.parse(jsonMatch[0]));else throw new Error("No JSON");}
+        catch{setAtsResult({overall:70,keyword:65,formatting:80,readability:75,skills:68,rating:"Needs Improvement",tips:["Add more keywords from job description","Use standard section headings","Quantify achievements with numbers"],missing_keywords:[]});}
       }
     }catch{}
     setAtsLoading(false);
   };
 
   const downloadResumePdf = async () => {
-    try {
-      const { pdf } = await import("@react-pdf/renderer");
-      const templateStyle = getTemplateForCountry(form.country);
-      const candidate = {
-        fullName: form.fullName, email: form.email || trackingEmail,
-        phone: form.phone, city: form.city, linkedIn: form.linkedIn, jobTitle: form.jobTitle,
-      };
-      const doc = (<ResumePdfDocument resumeText={result.resume} candidate={candidate} templateStyle={templateStyle} />);
-      const blob = await pdf(doc).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${(form.fullName || "Resume").replace(/\s+/g, "_")}_Resume.pdf`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) { alert("Failed to generate PDF. Please try copying the resume instead."); }
+    try{
+      const{pdf}=await import("@react-pdf/renderer");
+      const templateStyle=getTemplateForCountry(form.country);
+      const candidate={fullName:form.fullName,email:form.email||trackingEmail,phone:form.phone,city:form.city,linkedIn:form.linkedIn,jobTitle:form.jobTitle};
+      const doc=(<ResumePdfDocument resumeText={result.resume} candidate={candidate} templateStyle={templateStyle}/>);
+      const blob=await pdf(doc).toBlob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download=`${(form.fullName||"Resume").replace(/\s+/g,"_")}_Resume.pdf`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    }catch(e){alert("Failed to generate PDF. Please try copying the resume instead.");}
   };
 
   const generateCoverLetter = async () => {
-    setCoverLetterLoading(true); setCoverLetter(null);
-    try {
+    setCoverLetterLoading(true);setCoverLetter(null);
+    try{
       const prompt = `Write a professional cover letter for the following candidate applying for a job in ${form.country}.
 
 CANDIDATE DETAILS:
 Name: ${form.fullName}
 Target Role: ${form.jobTitle}
 City: ${form.city}
-Email: ${form.email || trackingEmail}
+Email: ${form.email||trackingEmail}
 
 THEIR RESUME SUMMARY:
-${result.resume.slice(0, 1500)}
+${result.resume.slice(0,1500)}
 
 JOB DESCRIPTION:
-${form.jobDescription || "General professional role in " + form.country}
+${form.jobDescription||"General professional role in "+form.country}
 
 COVER LETTER RULES:
 1. Follow ${form.country} cover letter conventions exactly
@@ -375,59 +330,42 @@ COVER LETTER RULES:
 13. Do NOT write the candidate name before "Sincerely," — only write it ONCE after "Sincerely,"
 14. The ONLY acceptable ending is exactly: "Sincerely," on one line then "${form.fullName}" on the next line — nothing else after that`;
 
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] })
-      });
-      const data = await res.json();
-      const text = data?.text || "";
-      if(text.length > 50){ setCoverLetter(text); }
-      else { alert("Could not generate cover letter. Please try again."); }
-    } catch(e) { alert("Error generating cover letter: " + e.message); }
+      const res=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
+      const data=await res.json();
+      const text=data?.text||"";
+      if(text.length>50){setCoverLetter(text);}
+      else{alert("Could not generate cover letter. Please try again.");}
+    }catch(e){alert("Error generating cover letter: "+e.message);}
     setCoverLetterLoading(false);
   };
 
   const downloadCoverLetterPdf = async () => {
-    try {
-      const { pdf } = await import("@react-pdf/renderer");
-      const templateStyle = getTemplateForCountry(form.country);
-      const candidate = {
-        fullName: form.fullName, email: form.email || trackingEmail,
-        phone: form.phone, city: form.city, linkedIn: form.linkedIn, jobTitle: form.jobTitle,
-      };
-      const doc = (<CoverLetterPdfDocument coverLetterText={coverLetter} candidate={candidate} templateStyle={templateStyle} />);
-      const blob = await pdf(doc).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${(form.fullName || "Cover_Letter").replace(/\s+/g, "_")}_Cover_Letter.pdf`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch(e) { alert("Failed to generate PDF. Please try copying the cover letter instead."); }
+    try{
+      const{pdf}=await import("@react-pdf/renderer");
+      const templateStyle=getTemplateForCountry(form.country);
+      const candidate={fullName:form.fullName,email:form.email||trackingEmail,phone:form.phone,city:form.city,linkedIn:form.linkedIn,jobTitle:form.jobTitle};
+      const doc=(<CoverLetterPdfDocument coverLetterText={coverLetter} candidate={candidate} templateStyle={templateStyle}/>);
+      const blob=await pdf(doc).toBlob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download=`${(form.fullName||"Cover_Letter").replace(/\s+/g,"_")}_Cover_Letter.pdf`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    }catch(e){alert("Failed to generate PDF. Please try copying the cover letter instead.");}
   };
 
   const sendResumeEmail = async () => {
-    const emailToUse = trackingEmail || form.email;
-    if(!emailToUse || !emailToUse.includes('@')){ alert("No email found. Please enter your email first."); return; }
+    const emailToUse=trackingEmail||form.email;
+    if(!emailToUse||!emailToUse.includes('@')){alert("No email found. Please enter your email first.");return;}
     setEmailSending(true);
-    try {
-      const res = await fetch("/api/send-email", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-          email: emailToUse, name: form.fullName,
-          resumeText: result.resume, atsScore: result.ats.score, country: form.country
-        })
-      });
-      const data = await res.json();
-      if(data.success){ setEmailSent(true); setTimeout(()=>setEmailSent(false), 4000); }
-      else { alert("Failed to send email. Please try copying the resume instead."); }
-    } catch { alert("Failed to send email. Please try copying the resume instead."); }
+    try{
+      const res=await fetch("/api/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:emailToUse,name:form.fullName,resumeText:result.resume,atsScore:result.ats.score,country:form.country})});
+      const data=await res.json();
+      if(data.success){setEmailSent(true);setTimeout(()=>setEmailSent(false),4000);}
+      else{alert("Failed to send email. Please try copying the resume instead.");}
+    }catch{alert("Failed to send email. Please try copying the resume instead.");}
     setEmailSending(false);
   };
 
-  const sc = (s) => s>=80?"#43e97b":s>=60?"#ffd700":"#ff6584";
+  const sc=(s)=>s>=80?"#43e97b":s>=60?"#ffd700":"#ff6584";
 
   return (
     <div style={{fontFamily:"system-ui,sans-serif",background:"#0a0a0f",minHeight:"100vh",color:"#f0f0f8",padding:"20px"}}>
@@ -436,7 +374,7 @@ COVER LETTER RULES:
         {showEmailPopup&&(
           <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
             <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:20,padding:32,maxWidth:460,width:"100%"}}>
-              {limitReached && !couponSuccess ? (
+              {limitReached&&!couponSuccess?(
                 <>
                   <div style={{textAlign:"center",marginBottom:24}}>
                     <div style={{fontSize:48,marginBottom:12}}>🔒</div>
@@ -448,9 +386,7 @@ COVER LETTER RULES:
                     <a href="/pricing" style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.3)",borderRadius:12,color:"#43e97b",fontFamily:"inherit",fontSize:14,fontWeight:700,padding:"14px",cursor:"pointer",textDecoration:"none",textAlign:"center",display:"block"}}>♾️ ₹2999 Lifetime</a>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-                    <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
-                    <span style={{fontSize:12,color:"#4a4a6a"}}>or use a coupon code</span>
-                    <div style={{flex:1,height:1,background:"#2a2a3d"}}/>
+                    <div style={{flex:1,height:1,background:"#2a2a3d"}}/><span style={{fontSize:12,color:"#4a4a6a"}}>or use a coupon code</span><div style={{flex:1,height:1,background:"#2a2a3d"}}/>
                   </div>
                   <div style={{marginBottom:8}}>
                     <div style={{display:"flex",gap:8}}>
@@ -462,7 +398,7 @@ COVER LETTER RULES:
                   </div>
                   <button onClick={()=>setShowEmailPopup(false)} style={{width:"100%",background:"transparent",border:"1px solid #2a2a3d",borderRadius:12,color:"#7878a0",fontFamily:"inherit",fontSize:13,padding:"11px",cursor:"pointer",marginTop:8}}>Maybe Later</button>
                 </>
-              ) : (
+              ):(
                 <>
                   <div style={{textAlign:"center",marginBottom:24}}>
                     <div style={{fontSize:48,marginBottom:12}}>📧</div>
@@ -473,9 +409,9 @@ COVER LETTER RULES:
                     <input type="email" placeholder="your@email.com" value={trackingEmail} onChange={e=>{setTrackingEmail(e.target.value);setEmailError("");}} onKeyDown={e=>e.key==="Enter"&&handleEmailSubmit()} style={{width:"100%",background:"#1c1c28",border:`1px solid ${emailError?"#ff6584":"#2a2a3d"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:15,padding:"12px 16px",outline:"none",boxSizing:"border-box"}}/>
                     {emailError&&<div style={{fontSize:12,color:"#ff6584",marginTop:6}}>⚠ {emailError}</div>}
                   </div>
-                  {!showCouponField ? (
+                  {!showCouponField?(
                     <button onClick={()=>setShowCouponField(true)} style={{background:"none",border:"none",color:"#6c63ff",cursor:"pointer",fontSize:12,padding:"0 0 12px",fontFamily:"inherit",textDecoration:"underline"}}>🎟️ Have a coupon code?</button>
-                  ) : (
+                  ):(
                     <div style={{marginBottom:12}}>
                       <div style={{display:"flex",gap:8}}>
                         <input placeholder="Enter coupon code" value={couponCode} onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponError("");setCouponSuccess("");}} style={{flex:1,background:"#1c1c28",border:`1px solid ${couponError?"#ff6584":couponSuccess?"#43e97b":"rgba(108,99,255,0.3)"}`,borderRadius:10,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"11px 14px",outline:"none"}}/>
@@ -685,12 +621,10 @@ COVER LETTER RULES:
                   {coverLetterLoading?"⚙ Generating...":"✦ Generate Cover Letter"}
                 </button>}
               </div>
-
               {coverLetterLoading&&<div style={{textAlign:"center",padding:24}}>
                 <div style={{width:36,height:36,border:"3px solid #2a2a3d",borderTopColor:"#6c63ff",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 10px"}}/>
                 <p style={{color:"#7878a0",fontSize:13}}>Writing your {form.country} cover letter...</p>
               </div>}
-
               {coverLetter&&<>
                 <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
                   <button onClick={()=>{navigator.clipboard.writeText(coverLetter);setCoverLetterCopied(true);setTimeout(()=>setCoverLetterCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>{coverLetterCopied?"✓ Copied!":"⎘ Copy Cover Letter"}</button>
@@ -700,7 +634,6 @@ COVER LETTER RULES:
                 <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:20,fontSize:13,lineHeight:1.9,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"'Courier New',monospace"}}>{coverLetter}</pre>
               </>}
             </div>
-
           </div>}
         </>}
 
@@ -748,6 +681,50 @@ COVER LETTER RULES:
           </div>}
         </div>}
 
+        {/* ===== HOW TO USE & FAQ SECTION ===== */}
+        <div style={{marginTop:48,borderTop:"1px solid #2a2a3d",paddingTop:32}}>
+
+          {/* How To Use */}
+          <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,marginBottom:12,overflow:"hidden"}}>
+            <button onClick={()=>setShowHowTo(!showHowTo)} style={{width:"100%",background:"transparent",border:"none",padding:"18px 24px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"inherit"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:18}}>📖</span>
+                <span style={{fontSize:15,fontWeight:700,color:"#f0f0f8"}}>How to Use ResumeForge AI</span>
+              </div>
+              <span style={{fontSize:18,color:"#6c63ff",transition:"transform 0.2s",transform:showHowTo?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
+            </button>
+            {showHowTo&&<div style={{padding:"0 24px 24px"}}>
+              {HOW_TO_STEPS.map((step,i)=>(
+                <div key={i} style={{display:"flex",gap:14,marginBottom:16,alignItems:"flex-start"}}>
+                  <div style={{background:"linear-gradient(135deg,#6c63ff,#9b59f5)",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,flexShrink:0,marginTop:2}}>{i+1}</div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#f0f0f8",marginBottom:4}}>{step.title}</div>
+                    <div style={{fontSize:13,color:"#7878a0",lineHeight:1.6}}>{step.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>}
+          </div>
+
+          {/* FAQ */}
+          <div style={{background:"#13131a",border:"1px solid #2a2a3d",borderRadius:16,overflow:"hidden"}}>
+            <div style={{padding:"18px 24px",borderBottom:"1px solid #2a2a3d",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:18}}>❓</span>
+              <span style={{fontSize:15,fontWeight:700,color:"#f0f0f8"}}>Frequently Asked Questions</span>
+            </div>
+            {FAQS.map((faq,i)=>(
+              <div key={i} style={{borderBottom:i<FAQS.length-1?"1px solid #1a1a2a":"none"}}>
+                <button onClick={()=>setOpenFaq(openFaq===i?null:i)} style={{width:"100%",background:"transparent",border:"none",padding:"16px 24px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"inherit",textAlign:"left"}}>
+                  <span style={{fontSize:13,fontWeight:600,color:"#e0e0f0",paddingRight:16}}>{faq.q}</span>
+                  <span style={{fontSize:16,color:"#6c63ff",flexShrink:0,transition:"transform 0.2s",transform:openFaq===i?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
+                </button>
+                {openFaq===i&&<div style={{padding:"0 24px 16px",fontSize:13,color:"#7878a0",lineHeight:1.7,borderLeft:"3px solid #6c63ff",marginLeft:24,marginRight:24,marginBottom:8}}>{faq.a}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
         <div style={{textAlign:"center",padding:"32px 0 16px",borderTop:"1px solid #2a2a3d",marginTop:32}}>
           <div style={{fontSize:12,color:"#4a4a6a"}}>Need help? Contact us at <a href={`mailto:${SUPPORT_EMAIL}`} style={{color:"#6c63ff",textDecoration:"none"}}>{SUPPORT_EMAIL}</a></div>
         </div>
