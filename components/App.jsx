@@ -352,16 +352,84 @@ COVER LETTER RULES:
     }catch(e){alert("Failed to generate PDF. Please try copying the cover letter instead.");}
   };
 
-  const sendResumeEmail = async () => {
-    const emailToUse=trackingEmail||form.email;
-    if(!emailToUse||!emailToUse.includes('@')){alert("No email found. Please enter your email first.");return;}
+ const sendResumeEmail = async () => {
+    const emailToUse = trackingEmail || form.email;
+    if (!emailToUse || !emailToUse.includes('@')) {
+      alert("No email found. Please enter your email first.");
+      return;
+    }
     setEmailSending(true);
-    try{
-      const res=await fetch("/api/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:emailToUse,name:form.fullName,resumeText:result.resume,atsScore:result.ats.score,country:form.country})});
-      const data=await res.json();
-      if(data.success){setEmailSent(true);setTimeout(()=>setEmailSent(false),4000);}
-      else{alert("Failed to send email. Please try copying the resume instead.");}
-    }catch{alert("Failed to send email. Please try copying the resume instead.");}
+    try {
+      let resumePdfBase64 = null;
+      let coverLetterPdfBase64 = null;
+
+      try {
+        const { pdf } = await import("@react-pdf/renderer");
+        const templateStyle = getTemplateForCountry(form.country);
+        const candidate = {
+          fullName: form.fullName,
+          email: emailToUse,
+          phone: form.phone,
+          city: form.city,
+          linkedIn: form.linkedIn,
+          jobTitle: form.jobTitle,
+        };
+
+        const resumeDoc = (
+          <ResumePdfDocument
+            resumeText={result.resume}
+            candidate={candidate}
+            templateStyle={templateStyle}
+          />
+        );
+        const resumeBlob = await pdf(resumeDoc).toBlob();
+        const resumeArrayBuffer = await resumeBlob.arrayBuffer();
+        resumePdfBase64 = btoa(
+          new Uint8Array(resumeArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+
+        if (coverLetter) {
+          const clDoc = (
+            <CoverLetterPdfDocument
+              coverLetterText={coverLetter}
+              candidate={candidate}
+              templateStyle={templateStyle}
+            />
+          );
+          const clBlob = await pdf(clDoc).toBlob();
+          const clArrayBuffer = await clBlob.arrayBuffer();
+          coverLetterPdfBase64 = btoa(
+            new Uint8Array(clArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+        }
+      } catch (pdfErr) {
+        console.warn("PDF generation failed, sending plain text fallback:", pdfErr.message);
+      }
+
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailToUse,
+          name: form.fullName,
+          resumeText: result.resume,
+          atsScore: result.ats.score,
+          country: form.country,
+          resumePdfBase64,
+          coverLetterPdfBase64,
+        })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setEmailSent(true);
+        setTimeout(() => setEmailSent(false), 4000);
+      } else {
+        alert("Failed to send email. Please try copying the resume instead.");
+      }
+    } catch {
+      alert("Failed to send email. Please try copying the resume instead.");
+    }
     setEmailSending(false);
   };
 
