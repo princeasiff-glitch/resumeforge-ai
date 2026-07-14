@@ -26,6 +26,44 @@ const COUNTRY_PHONE = {
   "Mexico":"+52","Argentina":"+54"
 };
 
+// ===== SMART APPLY: country-specific job boards =====
+const slugifyTitle = (t) => (t||"jobs").trim().toLowerCase().replace(/[^a-z0-9\s]/g,"").replace(/\s+/g,"-");
+
+const INDEED_DOMAINS = {
+  "India":"in.indeed.com","United States":"www.indeed.com","United Kingdom":"uk.indeed.com",
+  "Canada":"ca.indeed.com","Australia":"au.indeed.com","Germany":"de.indeed.com",
+  "France":"fr.indeed.com","UAE":"ae.indeed.com","Singapore":"sg.indeed.com",
+  "Netherlands":"nl.indeed.com","Ireland":"ie.indeed.com","Italy":"it.indeed.com",
+  "Spain":"es.indeed.com","Portugal":"pt.indeed.com","Poland":"pl.indeed.com",
+  "Mexico":"mx.indeed.com","Brazil":"br.indeed.com","Japan":"jp.indeed.com",
+  "South Africa":"za.indeed.com","New Zealand":"nz.indeed.com","Malaysia":"malaysia.indeed.com",
+  "Philippines":"ph.indeed.com","Pakistan":"pk.indeed.com","Sweden":"se.indeed.com",
+  "South Korea":"kr.indeed.com","Argentina":"ar.indeed.com","Nigeria":"ng.indeed.com",
+  "Sri Lanka":"lk.indeed.com","Bangladesh":"bd.indeed.com","Kenya":"www.indeed.com"
+};
+
+const getJobBoards = (country, title) => {
+  const q = encodeURIComponent(title||"");
+  const slug = slugifyTitle(title);
+  const boards = [];
+  boards.push({name:"LinkedIn Jobs",url:`https://www.linkedin.com/jobs/search/?keywords=${q}&location=${encodeURIComponent(country||"")}`});
+  const indeedDomain = INDEED_DOMAINS[country]||"www.indeed.com";
+  boards.push({name:"Indeed",url:`https://${indeedDomain}/jobs?q=${q}`});
+  if(country==="India") boards.push({name:"Naukri",url:`https://www.naukri.com/${slug}-jobs`});
+  if(country==="UAE"){
+    boards.push({name:"Naukri Gulf",url:`https://www.naukrigulf.com/${slug}-jobs`});
+    boards.push({name:"Bayt",url:`https://www.bayt.com/en/uae/jobs/${slug}-jobs/`});
+  }
+  if(country==="United Kingdom") boards.push({name:"Reed",url:`https://www.reed.co.uk/jobs/${slug}-jobs`});
+  if(country==="Australia") boards.push({name:"Seek",url:`https://www.seek.com.au/${slug}-jobs`});
+  if(country==="New Zealand") boards.push({name:"Seek NZ",url:`https://www.seek.co.nz/${slug}-jobs`});
+  if(country==="Germany") boards.push({name:"StepStone",url:`https://www.stepstone.de/jobs/${q}`});
+  if(country==="Singapore") boards.push({name:"JobStreet",url:`https://sg.jobstreet.com/${slug}-jobs`});
+  if(country==="Malaysia") boards.push({name:"JobStreet",url:`https://my.jobstreet.com/${slug}-jobs`});
+  if(country==="Philippines") boards.push({name:"JobStreet",url:`https://ph.jobstreet.com/${slug}-jobs`});
+  return boards;
+};
+
 const SUPPORT_EMAIL = "resumeforgeai.support@gmail.com";
 const FREE_LIMIT = 2;
 
@@ -36,12 +74,14 @@ const HOW_TO_STEPS = [
   { title: "Paste a Job Description (Recommended)", desc: "Pasting the job description you're applying for boosts your ATS score by 15-20 points by matching keywords automatically." },
   { title: "Generate Your Resume", desc: "Click \"Generate My ATS-Optimized Resume\" and wait 10-20 seconds. Your resume and ATS score will appear below." },
   { title: "Download, Copy or Email", desc: "Copy the resume text, download it as a styled PDF, or email it directly to yourself. You can also generate a matching Cover Letter with one click!" },
+  { title: "Use Smart Apply for Each Job", desc: "Found a job you love? Paste its description into Smart Apply to get a version of your resume tailored exactly to that posting — then apply via the direct job site links." },
 ];
 
 const FAQS = [
   { q: "Is my personal data safe?", a: "Yes — your data is stored only in your browser (localStorage) and is never shared or sold. We use it solely to generate your resume." },
   { q: "Which countries are supported?", a: "We support 30+ countries including UAE, India, USA, UK, Canada, Australia, Germany, Singapore, South Africa and more. Each country gets a tailored resume format." },
   { q: "What is an ATS score?", a: "ATS stands for Applicant Tracking System — software used by employers to filter resumes. Our AI scores your resume on keyword match, formatting, readability and skills coverage so you know how likely it is to pass automated screening." },
+  { q: "What is Smart Apply?", a: "Smart Apply tailors your existing resume to one specific job posting. Paste the job description and the AI re-emphasizes your real experience to match its keywords — without inventing anything — then gives you direct links to top job sites for your target country. One perfectly tailored application beats ten generic ones!" },
   { q: "What's the difference between Free and Pro?", a: "Free gives you 2 resumes to try the app. Pro (₹299/month or ₹2999 lifetime) gives you unlimited resumes, unlimited cover letters, full ATS analysis and priority support." },
   { q: "Can I generate resumes for different countries?", a: "Yes! Each time you generate a resume you can select a different target country. The AI adjusts the layout, language and format accordingly." },
   { q: "How accurate is the ATS score?", a: "Our ATS score is AI-generated and gives a strong indication of how well your resume matches the job description. It's not a guarantee but is a reliable guide for improvement." },
@@ -85,6 +125,12 @@ export default function App() {
   const [coverLetter, setCoverLetter] = useState(null);
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
   const [coverLetterCopied, setCoverLetterCopied] = useState(false);
+
+  const [saJobDesc, setSaJobDesc] = useState("");
+  const [saLoading, setSaLoading] = useState(false);
+  const [saResult, setSaResult] = useState(null);
+  const [saCopied, setSaCopied] = useState(false);
+  const [saError, setSaError] = useState("");
 
   const [showHowTo, setShowHowTo] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
@@ -135,6 +181,8 @@ export default function App() {
     setEducation([{institution:"",degree:"",year:""}]);
     setResult(null);
     setCoverLetter(null);
+    setSaResult(null);
+    setSaJobDesc("");
     try {
       localStorage.removeItem("resumeforge_result");
       localStorage.removeItem("resumeforge_form");
@@ -189,7 +237,7 @@ export default function App() {
   };
 
   const generate = async (email) => {
-    setError("");setLoading(true);setResult(null);setCoverLetter(null);setShowEmailPopup(false);
+    setError("");setLoading(true);setResult(null);setCoverLetter(null);setSaResult(null);setShowEmailPopup(false);
     if(!isUnlimited&&email&&resumesRemaining>0){
       try{
         const res = await fetch("/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
@@ -352,7 +400,63 @@ COVER LETTER RULES:
     }catch(e){alert("Failed to generate PDF. Please try copying the cover letter instead.");}
   };
 
- const sendResumeEmail = async () => {
+  // ===== SMART APPLY: tailor resume to a specific job posting =====
+  const generateSmartApply = async () => {
+    if(!saJobDesc.trim()){ setSaError("Please paste the job description you want to apply for."); return; }
+    setSaError("");setSaLoading(true);setSaResult(null);
+    try{
+      const prompt = `You are an expert resume tailoring assistant. Adjust the resume below so it is precisely targeted to the specific job description, following ${form.country} resume conventions.
+
+STRICT RULES:
+1. Do NOT invent any experience, skills, employers, dates or achievements not present in the original resume
+2. Reorder, reword and emphasize the EXISTING content to match the job description
+3. Naturally weave in job description keywords ONLY where the candidate genuinely has that experience or skill
+4. Keep contact details exactly as they appear in the original resume
+5. Keep the same plain-text formatting: UPPERCASE section headings, plain hyphen (-) bullets
+6. NO hashtags, NO asterisks, NO markdown anywhere
+7. Separate sections with one blank line only
+8. The tailored resume must be complete and ready to submit
+
+ORIGINAL RESUME:
+${result.resume}
+
+TARGET JOB DESCRIPTION:
+${saJobDesc}
+
+After the complete tailored resume write exactly:
+---MATCH_DATA---
+Then ONLY this JSON:
+{"matchScore":85,"keywordsMatched":["keyword1","keyword2","keyword3","keyword4"],"changes":["what was changed 1","what was changed 2","what was changed 3"]}`;
+
+      const res = await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
+      const data = await res.json();
+      let tailored = data?.text||"";
+      let match = {matchScore:75,keywordsMatched:[],changes:[]};
+      if(tailored.includes("---MATCH_DATA---")){
+        const parts = tailored.split("---MATCH_DATA---");
+        tailored = parts[0].trim();
+        try{const jsonStr=parts[1].replace(/```json|```/g,"").trim();const jm=jsonStr.match(/\{[\s\S]*\}/);if(jm)match={...match,...JSON.parse(jm[0])};}catch{}
+      }
+      if(!tailored||tailored.length<50){ setSaError("Could not tailor the resume. Please try again."); }
+      else{ setSaResult({resume:tailored,match}); }
+    }catch(e){setSaError("Error: "+e.message);}
+    setSaLoading(false);
+  };
+
+  const downloadSmartApplyPdf = async () => {
+    try{
+      const{pdf}=await import("@react-pdf/renderer");
+      const templateStyle=getTemplateForCountry(form.country);
+      const candidate={fullName:form.fullName,email:form.email||trackingEmail,phone:form.phone,city:form.city,linkedIn:form.linkedIn,jobTitle:form.jobTitle};
+      const doc=(<ResumePdfDocument resumeText={saResult.resume} candidate={candidate} templateStyle={templateStyle}/>);
+      const blob=await pdf(doc).toBlob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download=`${(form.fullName||"Resume").replace(/\s+/g,"_")}_Tailored_Resume.pdf`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    }catch(e){alert("Failed to generate PDF. Please try copying the tailored resume instead.");}
+  };
+
+  const sendResumeEmail = async () => {
     const emailToUse = trackingEmail || form.email;
     if (!emailToUse || !emailToUse.includes('@')) {
       alert("No email found. Please enter your email first.");
@@ -701,6 +805,58 @@ COVER LETTER RULES:
                 </div>
                 <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:20,fontSize:13,lineHeight:1.9,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"'Courier New',monospace"}}>{coverLetter}</pre>
               </>}
+            </div>
+
+            {/* Smart Apply Section */}
+            <div style={{background:"#13131a",border:"1px solid rgba(255,215,0,0.3)",borderRadius:16,padding:24,marginTop:16}}>
+              <div style={{marginBottom:12}}>
+                <h2 style={{margin:"0 0 4px",fontSize:16,fontWeight:700}}>⚡ Smart Apply — Tailor for a Specific Job</h2>
+                <div style={{fontSize:12,color:"#7878a0",lineHeight:1.6}}>Found a job posting you love? Paste its full description below and get a version of your resume tailored exactly to it — one perfect application beats ten generic ones!</div>
+              </div>
+              <textarea placeholder="" rows={7} value={saJobDesc} onChange={e=>{setSaJobDesc(e.target.value);setSaError("");}} style={{width:"100%",background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:8,color:"#f0f0f8",fontFamily:"inherit",fontSize:14,padding:"10px 12px",outline:"none",resize:"vertical",boxSizing:"border-box",marginBottom:10}}/>
+              {saError&&<div style={{background:"rgba(255,101,132,0.1)",border:"1px solid rgba(255,101,132,0.2)",color:"#ff6584",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13}}>⚠ {saError}</div>}
+              <button onClick={generateSmartApply} disabled={saLoading} style={{width:"100%",background:"linear-gradient(135deg,#f5a623,#ffd700)",border:"none",borderRadius:12,color:"#1a1a2e",fontFamily:"inherit",fontSize:15,fontWeight:800,padding:14,cursor:saLoading?"not-allowed":"pointer",opacity:saLoading?0.6:1,marginBottom:12}}>
+                {saLoading?"⚙ Tailoring your resume...":"⚡ Tailor My Resume for This Job"}
+              </button>
+              {saLoading&&<div style={{textAlign:"center",padding:24}}>
+                <div style={{width:36,height:36,border:"3px solid #2a2a3d",borderTopColor:"#ffd700",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 10px"}}/>
+                <p style={{color:"#7878a0",fontSize:13}}>Matching your experience to this job's keywords...</p>
+              </div>}
+              {saResult&&<>
+                <div style={{display:"flex",gap:20,alignItems:"center",flexWrap:"wrap",background:"#1c1c28",border:"1px solid rgba(255,215,0,0.2)",borderRadius:12,padding:18,marginBottom:12}}>
+                  <div style={{textAlign:"center",minWidth:90}}>
+                    <div style={{fontSize:44,fontWeight:800,color:sc(saResult.match.matchScore),lineHeight:1}}>{saResult.match.matchScore}</div>
+                    <div style={{fontSize:10,color:"#7878a0",marginTop:4,textTransform:"uppercase",letterSpacing:"0.05em"}}>Job Match</div>
+                  </div>
+                  <div style={{flex:1,minWidth:200}}>
+                    {saResult.match.keywordsMatched?.length>0&&<>
+                      <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#ffd700",marginBottom:8}}>🎯 Keywords Matched</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {saResult.match.keywordsMatched.map((k,i)=>(<div key={i} style={{background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.25)",color:"#ffd700",padding:"4px 12px",borderRadius:100,fontSize:12}}>✓ {k}</div>))}
+                      </div>
+                    </>}
+                  </div>
+                </div>
+                {saResult.match.changes?.length>0&&<div style={{background:"#1c1c28",border:"1px solid rgba(108,99,255,0.2)",borderRadius:12,padding:16,marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6c63ff",marginBottom:10}}>✏️ What Was Tailored</div>
+                  {saResult.match.changes.map((c,i)=>(<div key={i} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}><div style={{color:"#ffd700",fontSize:13,flexShrink:0}}>•</div><div style={{fontSize:13,color:"#e0e0f0",lineHeight:1.6}}>{c}</div></div>))}
+                </div>}
+                <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+                  <button onClick={()=>{navigator.clipboard.writeText(saResult.resume);setSaCopied(true);setTimeout(()=>setSaCopied(false),2000);}} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>{saCopied?"✓ Copied!":"⎘ Copy Tailored Resume"}</button>
+                  <button onClick={downloadSmartApplyPdf} style={{background:"rgba(67,233,123,0.1)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>⬇ Download Tailored PDF</button>
+                  <button onClick={()=>{setSaResult(null);}} style={{background:"rgba(108,99,255,0.1)",border:"1px solid rgba(108,99,255,0.2)",color:"#a89fff",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>↺ Tailor for Another Job</button>
+                </div>
+                <pre style={{background:"#1c1c28",border:"1px solid #2a2a3d",borderRadius:10,padding:20,fontSize:13,lineHeight:1.9,color:"#f0f0f8",whiteSpace:"pre-wrap",margin:0,fontFamily:"'Courier New',monospace"}}>{saResult.resume}</pre>
+              </>}
+              {form.country&&form.jobTitle&&<div style={{background:"#1c1c28",border:"1px solid rgba(67,233,123,0.2)",borderRadius:12,padding:18,marginTop:12}}>
+                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#43e97b",marginBottom:6}}>🔎 Find & Apply — {form.jobTitle} jobs in {form.country}</div>
+                <div style={{fontSize:12,color:"#7878a0",marginBottom:12,lineHeight:1.6}}>Direct links to {form.country}'s top job sites, pre-filled with your target role. Apply with your tailored resume!</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {getJobBoards(form.country,form.jobTitle).map(b=>(
+                    <a key={b.name} href={b.url} target="_blank" rel="noopener noreferrer" style={{background:"rgba(67,233,123,0.08)",border:"1px solid rgba(67,233,123,0.25)",color:"#43e97b",padding:"9px 18px",borderRadius:100,fontSize:13,fontWeight:600,textDecoration:"none",display:"inline-block"}}>{b.name} ↗</a>
+                  ))}
+                </div>
+              </div>}
             </div>
           </div>}
         </>}
